@@ -9,12 +9,16 @@ from pathlib import Path
 
 import bcrypt
 from flask import Flask, flash, g, redirect, render_template, request, session, url_for
-from sqlalchemy import func, or_
+from sqlalchemy import func, or_, text
 
 from email_service import send_reset_email
 from models import (
     Base,
+    BloggerPost,
+    BloggerPostAnalysis,
     Order,
+    OrderOffer,
+    OrderOfferStatus,
     OrderStatus,
     PasswordResetToken,
     User,
@@ -63,6 +67,7 @@ def verify_password(raw: str, hashed: str) -> bool:
 
 def init_db():
     Base.metadata.create_all(engine)
+    ensure_schema()
     db = SessionLocal()
     try:
         admin = db.query(User).filter(User.username == "admin").first()
@@ -82,6 +87,92 @@ def init_db():
 
 
 init_db()
+
+
+def ensure_schema():
+    """Простейшая миграция без Alembic: добавляет недостающие колонки/таблицы.
+
+    Работает для SQLite и PostgreSQL. Для существующих инсталляций Render это критично.
+    """
+    dialect = engine.dialect.name
+
+    def has_column_sqlite(table_name: str, col: str) -> bool:
+        rows = engine.execute(text(f"PRAGMA table_info({table_name})")).fetchall()  # type: ignore[attr-defined]
+        return any(r[1] == col for r in rows)
+
+    def has_column_pg(table_name: str, col: str) -> bool:
+        q = text(
+            "SELECT 1 FROM information_schema.columns "
+            "WHERE table_name = :t AND column_name = :c LIMIT 1"
+        )
+        with engine.connect() as conn:
+            return conn.execute(q, {"t": table_name, "c": col}).first() is not None
+
+    def has_column(table_name: str, col: str) -> bool:
+        if dialect == "sqlite":
+            with engine.connect() as conn:
+                rows = conn.execute(text(f"PRAGMA table_info({table_name})")).fetchall()
+            return any(r[1] == col for r in rows)
+        return has_column_pg(table_name, col)
+
+    def add_column(table_name: str, col_ddl: str):
+        with engine.begin() as conn:
+            conn.execute(text(f"ALTER TABLE {table_name} ADD COLUMN {col_ddl}"))
+
+    # users additions
+    user_cols = {
+        "display_name": "display_name VARCHAR(120)",
+        "blog_url": "blog_url VARCHAR(600)",
+        "bio": "bio VARCHAR(800)",
+        "niche_tags": "niche_tags VARCHAR(500)",
+    }
+    for c, ddl in user_cols.items():
+        if not has_column("users", c):
+            add_column("users", ddl)
+
+    # orders additions
+    order_cols = {
+        "budget_rub": "budget_rub INTEGER",
+        "payout_rub": "payout_rub INTEGER",
+        "result_notes": "result_notes VARCHAR(1200)",
+    }
+    for c, ddl in order_cols.items():
+        if not has_column("orders", c):
+            add_column("orders", ddl)
+
+    # new tables (safe via create_all)
+    Base.metadata.create_all(engine)
+
+
+UNETHICAL_KEYWORDS = {
+    "ненависть",
+    "расизм",
+    "нацизм",
+    "террор",
+    "суицид",
+    "наркот",
+    "порн",
+    "экстрем",
+    "насили",
+}
+
+
+def summarize_text(text_in: str, max_sentences: int = 4) -> str:
+    # простое экстрактивное саммари: первые предложения + наиболее частотные слова
+    t = " ".join((text_in or "").split())
+    if not t:
+        return ""
+    parts = [p.strip() for p in t.replace("!", ".").replace("?", ".").split(".") if p.strip()]
+    return ". ".join(parts[:max_sentences]) + ("." if parts else "")
+
+
+def unethical_flags(text_in: str) -> list[str]:
+    t = (text_in or "").lower()
+    flags = []
+    for k in UNETHICAL_KEYWORDS:
+        if k in t:
+            flags.append(k)
+    return sorted(set(flags))
 
 
 def login_user(user: User):
@@ -423,6 +514,77 @@ def blogger_orders():
     return render_template("blogger_orders.html", orders_open=orders_open, my_active=my_active, q=q)
 
 
+@app.route("/blogger/profile", methods=["GET", "POST"])
+@require_role(UserRole.BLOGGER)
+def blogger_profile():
+    db = get_db()
+    user = current_user()
+    if request.method == "POST":
+        user.display_name = (request.form.get("display_name") or "").strip() or None
+        user.blog_url = (request.form.get("blog_url") or "").strip() or None
+        user.bio = (request.form.get("bio") or "").strip() or None
+        user.niche_tags = (request.form.get("niche_tags") or "").strip() or None
+        db.commit()
+        flash("Профиль обновлён.", "success")
+        return redirect(url_for("blogger_profile"))
+
+    posts = (
+        db.query(BloggerPost)
+        .filter(BloggerPost.blogger_id == user.id)
+        .order_by(BloggerPost.created_at.desc())
+        .limit(3)
+        .all()
+    )
+    last_analysis = (
+        db.query(BloggerPostAnalysis)
+        .filter(BloggerPostAnalysis.blogger_id == user.id)
+        .order_by(BloggerPostAnalysis.checked_at.desc())
+        .first()
+    )
+    return render_template("blogger_profile.html", posts=posts, last_analysis=last_analysis)
+
+
+@app.route("/blogger/posts", methods=["POST"])
+@require_role(UserRole.BLOGGER)
+def blogger_update_posts():
+    db = get_db()
+    user = current_user()
+    # очищаем и сохраняем 3 последних поста (текст+ссылка вводятся вручную)
+    db.query(BloggerPost).filter(BloggerPost.blogger_id == user.id).delete()
+    for i in range(1, 4):
+        urlv = (request.form.get(f"url{i}") or "").strip() or None
+        textv = (request.form.get(f"text{i}") or "").strip()
+        if textv:
+            db.add(BloggerPost(blogger_id=user.id, url=urlv, text=textv))
+    db.commit()
+    flash("Посты обновлены.", "success")
+    return redirect(url_for("blogger_profile"))
+
+
+@app.route("/blogger/analyze-posts", methods=["POST"])
+@require_role(UserRole.BLOGGER)
+def blogger_analyze_posts():
+    db = get_db()
+    user = current_user()
+    posts = (
+        db.query(BloggerPost)
+        .filter(BloggerPost.blogger_id == user.id)
+        .order_by(BloggerPost.created_at.desc())
+        .limit(3)
+        .all()
+    )
+    joined = "\n\n".join([p.text for p in posts])
+    summary = summarize_text(joined)
+    flags = unethical_flags(joined)
+    db.add(BloggerPostAnalysis(blogger_id=user.id, summary=summary, flags=",".join(flags)))
+    db.commit()
+    if flags:
+        flash("Найдены потенциально неэтичные темы/слова: " + ", ".join(flags), "warning")
+    else:
+        flash("Проверка пройдена: явных неэтичных слов/тем не найдено.", "success")
+    return redirect(url_for("blogger_profile"))
+
+
 @app.route("/blogger/orders/<int:order_id>/take", methods=["POST"])
 @require_role(UserRole.BLOGGER)
 def blogger_take_order(order_id: int):
@@ -493,6 +655,144 @@ def advertiser_orders():
     return render_template("advertiser_orders.html", orders=orders)
 
 
+def recommend_bloggers(db, advertiser_id: int, limit: int = 8):
+    # MVP-рекомендации: активные не заблокированные блогеры, сортировка по выполненным заказам и совпадению тегов
+    adv = db.get(User, advertiser_id)
+    adv_tags = set((adv.niche_tags or "").lower().split(",")) if adv else set()
+
+    bloggers = (
+        db.query(User)
+        .filter(User.role == UserRole.BLOGGER, User.blocked.is_(False))
+        .all()
+    )
+    scored = []
+    for b in bloggers:
+        b_tags = set((b.niche_tags or "").lower().split(","))
+        overlap = len({t.strip() for t in adv_tags if t.strip()} & {t.strip() for t in b_tags if t.strip()})
+        done = db.query(func.count(Order.id)).filter(Order.blogger_id == b.id, Order.status == OrderStatus.COMPLETED).scalar() or 0
+        score = overlap * 5 + done
+        scored.append((score, b, overlap, done))
+    scored.sort(key=lambda x: x[0], reverse=True)
+    return scored[:limit]
+
+
+@app.route("/advertiser/bloggers")
+@require_role(UserRole.ADVERTISER)
+def advertiser_bloggers():
+    db = get_db()
+    user = current_user()
+    q = (request.args.get("q") or "").strip().lower()
+    bloggers_q = db.query(User).filter(User.role == UserRole.BLOGGER, User.blocked.is_(False))
+    if q:
+        like = f"%{q}%"
+        bloggers_q = bloggers_q.filter(or_(func.lower(User.email).like(like), func.lower(User.display_name).like(like)))
+    bloggers = bloggers_q.order_by(User.created_at.desc()).limit(200).all()
+    reco = recommend_bloggers(db, user.id, limit=8)
+    return render_template("advertiser_bloggers.html", bloggers=bloggers, reco=reco, q=q)
+
+
+@app.route("/advertiser/orders/<int:order_id>/offer", methods=["POST"])
+@require_role(UserRole.ADVERTISER)
+def advertiser_offer(order_id: int):
+    db = get_db()
+    user = current_user()
+    blogger_id = int(request.form.get("blogger_id") or "0")
+    order = db.get(Order, order_id)
+    blogger = db.get(User, blogger_id)
+    if not order or order.advertiser_id != user.id or not blogger or blogger.role != UserRole.BLOGGER:
+        flash("Нельзя создать предложение.", "danger")
+        return redirect(url_for("advertiser_orders"))
+    if order.status != OrderStatus.OPEN:
+        flash("Предложения возможны только для открытых заказов.", "warning")
+        return redirect(url_for("advertiser_orders"))
+    exists = (
+        db.query(OrderOffer)
+        .filter(OrderOffer.order_id == order.id, OrderOffer.blogger_id == blogger.id)
+        .first()
+    )
+    if exists:
+        flash("Предложение этому блогеру уже отправлено.", "info")
+        return redirect(url_for("advertiser_orders"))
+    db.add(OrderOffer(order_id=order.id, blogger_id=blogger.id, status=OrderOfferStatus.PENDING))
+    db.commit()
+    flash("Предложение отправлено.", "success")
+    return redirect(url_for("advertiser_orders"))
+
+
+@app.route("/blogger/offers")
+@require_role(UserRole.BLOGGER)
+def blogger_offers():
+    db = get_db()
+    user = current_user()
+    offers = (
+        db.query(OrderOffer, Order)
+        .join(Order, Order.id == OrderOffer.order_id)
+        .filter(OrderOffer.blogger_id == user.id)
+        .order_by(OrderOffer.created_at.desc())
+        .all()
+    )
+    return render_template("blogger_offers.html", offers=offers)
+
+
+@app.route("/blogger/offers/<int:offer_id>/<action>", methods=["POST"])
+@require_role(UserRole.BLOGGER)
+def blogger_offer_action(offer_id: int, action: str):
+    db = get_db()
+    user = current_user()
+    offer = db.get(OrderOffer, offer_id)
+    if not offer or offer.blogger_id != user.id:
+        flash("Предложение не найдено.", "danger")
+        return redirect(url_for("blogger_offers"))
+    if action == "accept":
+        offer.status = OrderOfferStatus.ACCEPTED
+        order = db.get(Order, offer.order_id)
+        if order and order.status == OrderStatus.OPEN and not order.blogger_id:
+            order.status = OrderStatus.ASSIGNED
+            order.blogger_id = user.id
+        db.commit()
+        flash("Предложение принято.", "success")
+    elif action == "reject":
+        offer.status = OrderOfferStatus.REJECTED
+        db.commit()
+        flash("Предложение отклонено.", "info")
+    return redirect(url_for("blogger_offers"))
+
+
+@app.route("/tools/generate", methods=["GET", "POST"])
+@require_login
+def tools_generate():
+    # MVP: генерируем текст + изображение-черновик без внешних API
+    from PIL import Image, ImageDraw, ImageFont
+    prompt = ""
+    generated_text = ""
+    img_url = None
+    if request.method == "POST":
+        prompt = (request.form.get("prompt") or "").strip()
+        if prompt:
+            generated_text = (
+                "Черновик поста:\n\n"
+                f"Тема: {prompt}\n\n"
+                "1) Захват внимания: короткий факт/вопрос.\n"
+                "2) Польза: 2–3 тезиса.\n"
+                "3) Личный опыт/пример.\n"
+                "4) Призыв к действию.\n"
+            )
+            img = Image.new("RGB", (1024, 576), (24, 9, 40))
+            d = ImageDraw.Draw(img)
+            title = "Проект Хайп"
+            text_body = (prompt[:140] + "…") if len(prompt) > 140 else prompt
+            d.rounded_rectangle([40, 40, 984, 536], radius=28, outline=(200, 160, 252), width=4)
+            d.text((70, 70), title, fill=(233, 213, 255))
+            d.text((70, 120), text_body, fill=(244, 240, 255))
+            out_dir = BASE_DIR / "static" / "gen"
+            out_dir.mkdir(parents=True, exist_ok=True)
+            name = f"gen_{secrets.token_hex(6)}.png"
+            path = out_dir / name
+            img.save(path, format="PNG")
+            img_url = url_for("static", filename=f"gen/{name}")
+    return render_template("tools_generate.html", prompt=prompt, generated_text=generated_text, img_url=img_url)
+
+
 @app.route("/advertiser/orders/new", methods=["GET", "POST"])
 @require_role(UserRole.ADVERTISER)
 def advertiser_new_order():
@@ -503,6 +803,14 @@ def advertiser_new_order():
             points = int(request.form.get("points_reward") or "0")
         except ValueError:
             points = 0
+        try:
+            budget_rub = int(request.form.get("budget_rub") or "0")
+        except ValueError:
+            budget_rub = 0
+        try:
+            payout_rub = int(request.form.get("payout_rub") or "0")
+        except ValueError:
+            payout_rub = 0
         if not title or not description:
             flash("Заполните название и описание.", "danger")
             return render_template("advertiser_new_order.html")
@@ -516,6 +824,8 @@ def advertiser_new_order():
             title=title,
             description=description,
             points_reward=points,
+            budget_rub=budget_rub or None,
+            payout_rub=payout_rub or None,
             status=OrderStatus.OPEN,
         )
         db.add(o)

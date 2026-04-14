@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Профиль — блогер{% endblock %}
+{% block content %}
+<section class="hero" style="padding-top:2rem;text-align:left;">
+  <h1 style="text-align:left;">Профиль</h1>
+  <p class="hero-lead" style="margin-left:0;text-align:left;">Ссылка на блог, ниша и 3 последних поста для анализа.</p>
+</section>
+
+<div class="grid-2">
+  <div class="card">
+    <h3 style="margin-top:0;">Данные профиля</h3>
+    <form method="post" class="form" style="max-width:none;">
+      <div>
+        <label for="display_name">Имя/ник</label>
+        <input id="display_name" name="display_name" type="text" value="{{ current_user.display_name or '' }}">
+      </div>
+      <div>
+        <label for="blog_url">Ссылка на блог</label>
+        <input id="blog_url" name="blog_url" type="text" placeholder="https://..." value="{{ current_user.blog_url or '' }}">
+      </div>
+      <div>
+        <label for="niche_tags">Ниша (теги через запятую)</label>
+        <input id="niche_tags" name="niche_tags" type="text" placeholder="beauty, travel, games" value="{{ current_user.niche_tags or '' }}">
+      </div>
+      <div>
+        <label for="bio">О себе</label>
+        <textarea id="bio" name="bio">{{ current_user.bio or '' }}</textarea>
+      </div>
+      <button class="btn btn-primary" type="submit">Сохранить</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0;">3 последних поста</h3>
+    <form method="post" action="{{ url_for('blogger_update_posts') }}" class="form" style="max-width:none;">
+      {% for i in range(1,4) %}
+      <div>
+        <label>Пост {{ i }} — ссылка (необязательно)</label>
+        <input name="url{{ i }}" type="text" value="{{ posts[i-1].url if posts|length >= i and posts[i-1].url else '' }}" placeholder="https://...">
+      </div>
+      <div>
+        <label>Пост {{ i }} — текст</label>
+        <textarea name="text{{ i }}" placeholder="Вставьте текст поста...">{{ posts[i-1].text if posts|length >= i else '' }}</textarea>
+      </div>
+      {% endfor %}
+      <button class="btn btn-ghost" type="submit">Сохранить посты</button>
+    </form>
+
+    <form method="post" action="{{ url_for('blogger_analyze_posts') }}" style="margin-top:1rem;">
+      <button class="btn btn-primary" type="submit">Проанализировать посты</button>
+    </form>
+
+    {% if last_analysis %}
+      <div class="card" style="margin-top:1rem;background:rgba(0,0,0,0.18);">
+        <h4 style="margin:0 0 0.5rem;">Последний анализ</h4>
+        <p class="muted" style="white-space:pre-wrap;margin:0 0 0.75rem;">{{ last_analysis.summary }}</p>
+        <div class="muted">Флаги: {{ last_analysis.flags if last_analysis.flags else "нет" }}</div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+

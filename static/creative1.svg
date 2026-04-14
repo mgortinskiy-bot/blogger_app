@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="420" viewBox="0 0 820 420" fill="none">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="820" y2="420" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#C084FC" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#E879F9" stop-opacity="0.85"/>
+    </linearGradient>
+    <filter id="b" x="-50" y="-50" width="920" height="520" filterUnits="userSpaceOnUse">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
+  </defs>
+  <rect x="0" y="0" width="820" height="420" rx="28" fill="#0C0618"/>
+  <g filter="url(#b)">
+    <path d="M146 338C246 218 302 106 470 142C630 176 646 302 740 238" stroke="url(#g)" stroke-width="22" stroke-linecap="round"/>
+  </g>
+  <rect x="72" y="78" width="248" height="168" rx="22" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.14)"/>
+  <path d="M118 132h156M118 162h120M118 192h92" stroke="rgba(255,255,255,0.55)" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="616" cy="156" r="62" fill="rgba(255,255,255,0.07)" stroke="rgba(255,255,255,0.14)"/>
+  <path d="M590 158l18 18 40-44" stroke="rgba(255,255,255,0.65)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="72" y="318" fill="rgba(255,255,255,0.85)" font-family="Inter,Segoe UI,sans-serif" font-size="34" font-weight="800">@50B82 " >=B5=B " =0;8B8:0</text>
+  <text x="72" y="356" fill="rgba(255,255,255,0.55)" font-family="Inter,Segoe UI,sans-serif" font-size="18" font-weight="500">;;NAB@0F8O 4;O ;5=48=30</text>
+</svg>
+

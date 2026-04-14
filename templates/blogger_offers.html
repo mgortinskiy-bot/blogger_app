@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Предложения — блогер{% endblock %}
+{% block content %}
+<section class="hero" style="padding-top:2rem;text-align:left;">
+  <h1 style="text-align:left;">Предложения от брендов</h1>
+  <p class="hero-lead" style="margin-left:0;text-align:left;">Вы можете принять предложение — заказ перейдёт в работу.</p>
+</section>
+
+<div class="card">
+  {% for offer, order in offers %}
+    <div style="padding:1rem 0;border-bottom:1px solid var(--border);">
+      <strong>{{ order.title }}</strong>
+      <p class="muted" style="margin:0.5rem 0;">{{ order.description }}</p>
+      <div class="order-meta">
+        <span class="badge badge-open">{{ offer.status }}</span>
+        <span class="muted">Награда: {{ order.points_reward }} баллов{% if order.payout_rub %} · {{ order.payout_rub }} ₽{% endif %}</span>
+        {% if offer.status == 'pending' %}
+          <form class="inline-form" method="post" action="{{ url_for('blogger_offer_action', offer_id=offer.id, action='accept') }}">
+            <button class="btn btn-primary btn-sm" type="submit">Принять</button>
+          </form>
+          <form class="inline-form" method="post" action="{{ url_for('blogger_offer_action', offer_id=offer.id, action='reject') }}">
+            <button class="btn btn-ghost btn-sm" type="submit">Отклонить</button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+  {% else %}
+    <p class="muted">Предложений пока нет.</p>
+  {% endfor %}
+</div>
+{% endblock %}
+

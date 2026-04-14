@@ -32,6 +32,10 @@ class User(Base):
     role: Mapped[str] = mapped_column(String(20), index=True)
     blocked: Mapped[bool] = mapped_column(Boolean, default=False)
     points: Mapped[int] = mapped_column(Integer, default=0)
+    display_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    blog_url: Mapped[str | None] = mapped_column(String(600), nullable=True)
+    bio: Mapped[str | None] = mapped_column(String(800), nullable=True)
+    niche_tags: Mapped[str | None] = mapped_column(String(500), nullable=True)  # comma-separated
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     last_login: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
@@ -62,6 +66,9 @@ class Order(Base):
     title: Mapped[str] = mapped_column(String(300))
     description: Mapped[Text] = mapped_column(Text)
     points_reward: Mapped[int] = mapped_column(Integer, default=100)
+    budget_rub: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    payout_rub: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    result_notes: Mapped[str | None] = mapped_column(String(1200), nullable=True)
     status: Mapped[str] = mapped_column(String(20), default=OrderStatus.OPEN, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
@@ -72,6 +79,42 @@ class Order(Base):
     blogger: Mapped["User | None"] = relationship(
         "User", back_populates="orders_as_blogger", foreign_keys=[blogger_id]
     )
+
+
+class OrderOfferStatus:
+    PENDING = "pending"
+    ACCEPTED = "accepted"
+    REJECTED = "rejected"
+
+
+class OrderOffer(Base):
+    __tablename__ = "order_offers"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    order_id: Mapped[int] = mapped_column(ForeignKey("orders.id", ondelete="CASCADE"), index=True)
+    blogger_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    status: Mapped[str] = mapped_column(String(20), default=OrderOfferStatus.PENDING, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class BloggerPost(Base):
+    __tablename__ = "blogger_posts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    blogger_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    url: Mapped[str | None] = mapped_column(String(800), nullable=True)
+    text: Mapped[Text] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class BloggerPostAnalysis(Base):
+    __tablename__ = "blogger_post_analyses"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    blogger_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    summary: Mapped[Text] = mapped_column(Text)
+    flags: Mapped[str] = mapped_column(String(800))  # comma-separated
+    checked_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
 def _normalize_postgres_url(url: str) -> str:

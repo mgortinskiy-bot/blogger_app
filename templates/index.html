@@ -6,13 +6,22 @@
   <h1>Платформа, где блогеры и бренды находят друг друга</h1>
   <p class="hero-lead">
     Рекламодатели выставляют заказы на рекламу. Блогеры выбирают подходящие кампании,
-    выполняют их и получают баллы на счёт. Прозрачная статистика и удобный личный кабинет.
+    выполняют их и получают баллы на счёт. Плюс рекомендации, проверка контента и генерация черновиков.
   </p>
   <div style="display:flex;flex-wrap:wrap;gap:0.75rem;justify-content:center;">
     <a class="btn btn-primary" href="{{ url_for('register_blogger') }}">Я блогер</a>
     <a class="btn btn-ghost" href="{{ url_for('register_advertiser') }}">Я рекламодатель</a>
   </div>
 </section>
+
+<div class="grid-2" style="align-items:stretch;">
+  <div class="card" style="padding:0;overflow:hidden;">
+    <img src="{{ url_for('static', filename='creative1.svg') }}" alt="Креатив блогерской профессии" style="width:100%;display:block;">
+  </div>
+  <div class="card" style="padding:0;overflow:hidden;">
+    <img src="{{ url_for('static', filename='creative2.svg') }}" alt="Аналитика и рекомендации" style="width:100%;display:block;">
+  </div>
+</div>
 
 <div class="grid-2">
   <article class="card">

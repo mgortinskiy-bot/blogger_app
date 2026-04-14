@@ -31,12 +31,16 @@
             <a href="{{ url_for('admin_users') }}">Пользователи</a>
           {% elif current_user.role == 'blogger' %}
             <a href="{{ url_for('blogger_orders') }}">Заказы</a>
+            <a href="{{ url_for('blogger_offers') }}">Предложения</a>
+            <a href="{{ url_for('blogger_profile') }}">Профиль</a>
             <a href="{{ url_for('blogger_stats') }}">Статистика</a>
             <span class="muted" style="font-size:0.85rem;">{{ current_user.points or 0 }} баллов</span>
           {% elif current_user.role == 'advertiser' %}
             <a href="{{ url_for('advertiser_orders') }}">Мои заказы</a>
             <a href="{{ url_for('advertiser_new_order') }}">Создать заказ</a>
+            <a href="{{ url_for('advertiser_bloggers') }}">Блогеры</a>
           {% endif %}
+          <a href="{{ url_for('tools_generate') }}">Генератор</a>
           <a href="{{ url_for('logout') }}">Выход</a>
         {% else %}
           <a href="{{ url_for('index') }}">Главная</a>
@@ -62,8 +66,7 @@
     </main>
 
     <footer class="site-footer">
-      Проект Хайп — демо-платформа. Вдохновлено идеей бирж блогеров вроде
-      <a href="https://perfluence.net/" rel="noopener" target="_blank">Perfluence</a>.
+      Проект Хайп — платформа для работы блогеров и брендов.
     </footer>
   </div>
 </body>
