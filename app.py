@@ -86,9 +86,6 @@ def init_db():
         db.close()
 
 
-init_db()
-
-
 def ensure_schema():
     """Простейшая миграция без Alembic: добавляет недостающие колонки/таблицы.
 
@@ -142,6 +139,9 @@ def ensure_schema():
 
     # new tables (safe via create_all)
     Base.metadata.create_all(engine)
+
+
+init_db()
 
 
 UNETHICAL_KEYWORDS = {
