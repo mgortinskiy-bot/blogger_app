@@ -1,5 +1,5 @@
 # Blueprint для Render: New → Blueprint → подключить репозиторий.
-# Репозиторий должен иметь в корне эту папку (или задайте Root Directory = proekt-hayp в UI).
+# ВАЖНО: в GitHub залит сам проект (без папки proekt-hayp сверху), поэтому rootDir не нужен.
 
 databases:
   - name: hayp-postgres
@@ -16,6 +16,9 @@ services:
     startCommand: gunicorn --bind 0.0.0.0:$PORT app:app
     healthCheckPath: /
     envVars:
+      # Зафиксировать Python, чтобы Render не взял дефолт 3.14+
+      - key: PYTHON_VERSION
+        value: 3.12.8
       - key: DATABASE_URL
         fromDatabase:
           name: hayp-postgres
