@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Пользователи — админ{% endblock %}
+{% block content %}
+<section class="hero" style="padding-top:2rem;text-align:left;">
+  <h1 style="text-align:left;">Пользователи</h1>
+  <p class="hero-lead" style="margin-left:0;text-align:left;">Блокировка и удаление. Администратора удалить нельзя.</p>
+</section>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Email / логин</th>
+        <th>Роль</th>
+        <th>Баллы</th>
+        <th>Регистрация</th>
+        <th>Последний вход</th>
+        <th>Статус</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for u in users %}
+      <tr>
+        <td>{{ u.id }}</td>
+        <td>{% if u.username %}{{ u.username }} · {% endif %}{{ u.email }}</td>
+        <td>{{ u.role }}</td>
+        <td>{{ u.points or 0 }}</td>
+        <td>{{ u.created_at.strftime('%d.%m.%Y') }}</td>
+        <td>{{ u.last_login.strftime('%d.%m %H:%M') if u.last_login else '—' }}</td>
+        <td>
+          {% if u.blocked %}<span class="badge badge-blocked">Заблокирован</span>{% else %}<span class="badge badge-open">Активен</span>{% endif %}
+        </td>
+        <td>
+          {% if u.role != 'admin' %}
+            <form class="inline-form" method="post" action="{{ url_for('admin_toggle_block', user_id=u.id) }}" style="display:inline;">
+              <button class="btn btn-ghost btn-sm" type="submit">{% if u.blocked %}Разблокировать{% else %}Заблокировать{% endif %}</button>
+            </form>
+            <form class="inline-form" method="post" action="{{ url_for('admin_delete_user', user_id=u.id) }}" style="display:inline;margin-left:0.25rem;" onsubmit="return confirm('Удалить пользователя?');">
+              <button class="btn btn-danger btn-sm" type="submit">Удалить</button>
+            </form>
+          {% else %}
+            —
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

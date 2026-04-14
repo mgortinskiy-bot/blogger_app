@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Новый заказ — Проект Хайп{% endblock %}
+{% block content %}
+<section class="hero" style="padding-top:2rem;text-align:left;">
+  <h1 style="text-align:left;">Новый заказ на рекламу</h1>
+  <p class="hero-lead" style="margin-left:0;text-align:left;">Опишите задачу и укажите награду в баллах для блогера.</p>
+</section>
+
+<div class="card" style="max-width:560px;">
+  <form class="form" method="post" style="max-width:none;">
+    <div>
+      <label for="title">Название</label>
+      <input id="title" name="title" type="text" required maxlength="300" placeholder="Например: Интеграция сервиса доставки">
+    </div>
+    <div>
+      <label for="description">Описание и условия</label>
+      <textarea id="description" name="description" required placeholder="Формат, сроки, ключевые сообщения…"></textarea>
+    </div>
+    <div>
+      <label for="points_reward">Награда (баллы)</label>
+      <input id="points_reward" name="points_reward" type="number" min="1" value="100" required>
+    </div>
+    <button class="btn btn-primary" type="submit">Опубликовать</button>
+  </form>
+</div>
+{% endblock %}

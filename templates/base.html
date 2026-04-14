@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Проект Хайп{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <a href="{{ url_for('index') }}" class="brand" style="text-decoration:none;">
+        <div class="brand-mark" aria-hidden="true" style="padding:0;overflow:hidden;">
+          <svg width="28" height="28" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;">
+            <path d="M18 4L10 18h4l-2 10 10-16h-4l2-8z" fill="#1a0524" opacity="0.95"/>
+            <path d="M22 2L14 16h5l-1.5 8L26 8h-5.5L22 2z" fill="#1a0524" opacity="0.35"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <span class="brand-title">Проект Хайп</span>
+          <span class="brand-sub">биржа заказов для блогеров</span>
+        </div>
+      </a>
+      <nav class="nav">
+        {% if current_user %}
+          {% if current_user.role == 'admin' %}
+            <a href="{{ url_for('admin_dashboard') }}">Дашборд</a>
+            <a href="{{ url_for('admin_users') }}">Пользователи</a>
+          {% elif current_user.role == 'blogger' %}
+            <a href="{{ url_for('blogger_orders') }}">Заказы</a>
+            <a href="{{ url_for('blogger_stats') }}">Статистика</a>
+            <span class="muted" style="font-size:0.85rem;">{{ current_user.points or 0 }} баллов</span>
+          {% elif current_user.role == 'advertiser' %}
+            <a href="{{ url_for('advertiser_orders') }}">Мои заказы</a>
+            <a href="{{ url_for('advertiser_new_order') }}">Создать заказ</a>
+          {% endif %}
+          <a href="{{ url_for('logout') }}">Выход</a>
+        {% else %}
+          <a href="{{ url_for('index') }}">Главная</a>
+          <a href="{{ url_for('login') }}">Вход</a>
+          <a href="{{ url_for('register_blogger') }}">Блогерам</a>
+          <a href="{{ url_for('register_advertiser') }}">Брендам</a>
+        {% endif %}
+      </nav>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-wrap">
+          {% for cat, msg in messages %}
+            <div class="flash flash-{{ cat }}">{{ msg }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <main>
+      {% block content %}{% endblock %}
+    </main>
+
+    <footer class="site-footer">
+      Проект Хайп — демо-платформа. Вдохновлено идеей бирж блогеров вроде
+      <a href="https://perfluence.net/" rel="noopener" target="_blank">Perfluence</a>.
+    </footer>
+  </div>
+</body>
+</html>

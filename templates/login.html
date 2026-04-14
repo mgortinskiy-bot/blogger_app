@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Вход — Проект Хайп{% endblock %}
+{% block content %}
+<section class="hero" style="padding-top:2rem;">
+  <h1>Вход</h1>
+  <p class="hero-lead">Логин администратора: <code style="color:#e9d5ff;">admin</code>. Остальные — email.</p>
+</section>
+<div class="card" style="max-width:480px;margin:0 auto;">
+  <form class="form" method="post" action="{{ url_for('login') }}">
+    <div>
+      <label for="login">Логин или email</label>
+      <input id="login" name="login" type="text" required autocomplete="username">
+    </div>
+    <div>
+      <label for="password">Пароль</label>
+      <input id="password" name="password" type="password" required autocomplete="current-password">
+    </div>
+    <button class="btn btn-primary" type="submit">Войти</button>
+    <p class="muted" style="margin:0;"><a href="{{ url_for('forgot_password') }}">Забыли пароль?</a></p>
+  </form>
+</div>
+{% endblock %}

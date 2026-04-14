@@ -1,0 +1,24 @@
+# Blueprint для Render: New → Blueprint → подключить репозиторий.
+# Репозиторий должен иметь в корне эту папку (или задайте Root Directory = proekt-hayp в UI).
+
+databases:
+  - name: hayp-postgres
+    databaseName: hayp
+    user: hayp
+    plan: free
+
+services:
+  - type: web
+    name: proekt-hayp
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --bind 0.0.0.0:$PORT app:app
+    healthCheckPath: /
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: hayp-postgres
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true

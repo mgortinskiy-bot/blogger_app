@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Статистика — блогер{% endblock %}
+{% block content %}
+<section class="hero" style="padding-top:2rem;text-align:left;">
+  <h1 style="text-align:left;">Ваша статистика</h1>
+  <p class="hero-lead" style="margin-left:0;text-align:left;">Выполненные заказы и начисленные баллы.</p>
+</section>
+
+<div class="stats-row" style="max-width:640px;">
+  <div class="stat"><b>{{ balance }}</b><span>Баллов на счёте</span></div>
+  <div class="stat"><b>{{ completed|length }}</b><span>Заказов выполнено</span></div>
+  <div class="stat"><b>{{ total_points }}</b><span>Всего заработано баллами</span></div>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">История выполненных</h3>
+  <div class="table-wrap" style="border:none;margin-top:0.75rem;">
+    <table>
+      <thead>
+        <tr>
+          <th>Заказ</th>
+          <th>Баллы</th>
+          <th>Завершён</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for o in completed %}
+        <tr>
+          <td>{{ o.title }}</td>
+          <td>{{ o.points_reward }}</td>
+          <td>{{ o.completed_at.strftime('%d.%m.%Y %H:%M') if o.completed_at else '—' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="3" class="muted">Пока нет завершённых заказов</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

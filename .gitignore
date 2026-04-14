@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+.venv/
+venv/
+env/
+*.db
+.env
+.env.*
+*.log
+cloudflared.exe
+.DS_Store

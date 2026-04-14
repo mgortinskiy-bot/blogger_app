@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Админ — дашборд{% endblock %}
+{% block content %}
+<section class="hero" style="padding-top:2rem;text-align:left;">
+  <h1 style="text-align:left;">Дашборд активности</h1>
+  <p class="hero-lead" style="margin-left:0;text-align:left;">Сводка по пользователям и заказам.</p>
+</section>
+
+<div class="stats-row">
+  <div class="stat"><b>{{ total_users }}</b><span>Всего пользователей</span></div>
+  <div class="stat"><b>{{ bloggers }}</b><span>Блогеры</span></div>
+  <div class="stat"><b>{{ advertisers }}</b><span>Рекламодатели</span></div>
+  <div class="stat"><b>{{ orders_total }}</b><span>Заказов</span></div>
+  <div class="stat"><b>{{ orders_done }}</b><span>Выполнено</span></div>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h3>Регистрации за 14 дней</h3>
+    <div class="bar-chart" style="margin-top:1.5rem;padding-bottom:1.5rem;">
+      {% for label in chart_labels %}
+        {% set v = chart_values[loop.index0] %}
+        {% set mx = chart_max if chart_max else 1 %}
+        {% set h = (v / mx * 100) %}
+        <div class="bar" style="height: {{ '%.1f'|format(h) }}%;" title="{{ v }} за {{ label }}">
+          <span>{{ label[5:] }}</span>
+        </div>
+      {% endfor %}
+    </div>
+    {% if not chart_labels %}
+      <p class="muted">Пока нет регистраций за период.</p>
+    {% endif %}
+  </div>
+  <div class="card">
+    <h3>Недавние входы блогеров</h3>
+    <ul class="muted" style="padding-left:1.1rem;margin:0.5rem 0 0;">
+      {% for u in active_bloggers %}
+        <li style="margin-bottom:0.35rem;">{{ u.email }} — {{ u.last_login.strftime('%d.%m %H:%M') if u.last_login else '—' }}</li>
+      {% else %}
+        <li>Нет данных</li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+
+<div class="card" style="margin-top:1.25rem;">
+  <h3>Последние заказы</h3>
+  <div class="table-wrap" style="margin-top:1rem;border:none;">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Название</th>
+          <th>Статус</th>
+          <th>Баллы</th>
+          <th>Создан</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for o in recent_orders %}
+        <tr>
+          <td>{{ o.id }}</td>
+          <td>{{ o.title[:48] }}{% if o.title|length > 48 %}…{% endif %}</td>
+          <td>
+            {% if o.status == 'open' %}<span class="badge badge-open">Открыт</span>{% endif %}
+            {% if o.status == 'assigned' %}<span class="badge badge-assigned">В работе</span>{% endif %}
+            {% if o.status == 'completed' %}<span class="badge badge-done">Готово</span>{% endif %}
+          </td>
+          <td>{{ o.points_reward }}</td>
+          <td>{{ o.created_at.strftime('%d.%m.%Y') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Заказы — блогер{% endblock %}
+{% block content %}
+<section class="hero" style="padding-top:2rem;text-align:left;">
+  <h1 style="text-align:left;">Каталог заказов</h1>
+  <p class="hero-lead" style="margin-left:0;text-align:left;">Ищите по названию и описанию. Один блогер — один активный заказ до завершения.</p>
+</section>
+
+<form method="get" class="card" style="display:flex;flex-wrap:wrap;gap:0.75rem;align-items:flex-end;margin-bottom:1.25rem;">
+  <div style="flex:1;min-width:200px;">
+    <label for="q">Поиск</label>
+    <input id="q" name="q" type="text" value="{{ q }}" placeholder="Ключевые слова…">
+  </div>
+  <button class="btn btn-primary" type="submit">Найти</button>
+</form>
+
+{% if my_active %}
+<div class="card" style="margin-bottom:1.25rem;">
+  <h3 style="margin-top:0;">В работе</h3>
+  {% for o in my_active %}
+  <div class="order-card card" style="background:rgba(0,0,0,0.2);">
+    <strong>{{ o.title }}</strong>
+    <p class="muted" style="margin:0.5rem 0;">{{ o.description }}</p>
+    <div class="order-meta">
+      <span class="badge badge-assigned">В работе</span>
+      <span class="muted">+{{ o.points_reward }} баллов за выполнение</span>
+      <form method="post" action="{{ url_for('blogger_complete_order', order_id=o.id) }}" class="inline-form" onsubmit="return confirm('Отметить заказ выполненным?');">
+        <button class="btn btn-primary btn-sm" type="submit">Завершить и получить баллы</button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="card">
+  <h3 style="margin-top:0;">Открытые заказы</h3>
+  {% for o in orders_open %}
+  <div class="order-card" style="padding:1rem 0;border-bottom:1px solid var(--border);">
+    <strong>{{ o.title }}</strong>
+    <p class="muted" style="margin:0.5rem 0;">{{ o.description }}</p>
+    <div class="order-meta">
+      <span class="badge badge-open">Открыт</span>
+      <span class="muted">Награда: {{ o.points_reward }} баллов</span>
+      {% if not my_active %}
+      <form method="post" action="{{ url_for('blogger_take_order', order_id=o.id) }}" class="inline-form">
+        <button class="btn btn-primary btn-sm" type="submit">Взять заказ</button>
+      </form>
+      {% else %}
+      <span class="muted">Сначала завершите текущий заказ</span>
+      {% endif %}
+    </div>
+  </div>
+  {% else %}
+  <p class="muted">Нет подходящих заказов.</p>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Проект Хайп — главная{% endblock %}
+{% block content %}
+<section class="hero">
+  <div class="pill">Кодовое название · Проект Хайп</div>
+  <h1>Платформа, где блогеры и бренды находят друг друга</h1>
+  <p class="hero-lead">
+    Рекламодатели выставляют заказы на рекламу. Блогеры выбирают подходящие кампании,
+    выполняют их и получают баллы на счёт. Прозрачная статистика и удобный личный кабинет.
+  </p>
+  <div style="display:flex;flex-wrap:wrap;gap:0.75rem;justify-content:center;">
+    <a class="btn btn-primary" href="{{ url_for('register_blogger') }}">Я блогер</a>
+    <a class="btn btn-ghost" href="{{ url_for('register_advertiser') }}">Я рекламодатель</a>
+  </div>
+</section>
+
+<div class="grid-2">
+  <article class="card">
+    <h2>Блогерам</h2>
+    <p class="muted">Регистрация по email, поиск заказов, взятие в работу и начисление баллов за выполнение.
+      Статистика по завершённым кампаниям — в один клик.</p>
+    <a class="btn btn-primary btn-sm" href="{{ url_for('register_blogger') }}">Регистрация</a>
+  </article>
+  <article class="card">
+    <h2>Брендам</h2>
+    <p class="muted">Публикуйте заказы с описанием и вознаграждением в баллах. Следите за статусом:
+      открыт, в работе, выполнен.</p>
+    <a class="btn btn-ghost btn-sm" href="{{ url_for('register_advertiser') }}">Начать</a>
+  </article>
+</div>
+
+<div class="card" style="margin-top:1.5rem;text-align:center;">
+  <h3 style="margin-bottom:0.5rem;">Администратору</h3>
+  <p class="muted" style="margin-bottom:1rem;">Вход: логин <strong>admin</strong>, пароль из инструкции к развёртыванию.
+    Управление пользователями и дашборды активности.</p>
+  <a class="btn btn-ghost btn-sm" href="{{ url_for('login') }}">Войти</a>
+</div>
+{% endblock %}
