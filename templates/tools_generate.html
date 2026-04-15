@@ -21,7 +21,11 @@
   <div class="card">
     <h3 style="margin-top:0;">Результат</h3>
     {% if generated_text %}
-      <pre class="muted" style="white-space:pre-wrap;margin:0 0 1rem;">{{ generated_text }}</pre>
+      <label for="out">Готовый текст поста (можно копировать)</label>
+      <textarea id="out" readonly style="min-height:260px;">{{ generated_text }}</textarea>
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.75rem;">
+        <button class="btn btn-ghost btn-sm" type="button" onclick="navigator.clipboard.writeText(document.getElementById('out').value)">Скопировать</button>
+      </div>
     {% else %}
       <p class="muted">Введите описание и нажмите «Сгенерировать».</p>
     {% endif %}

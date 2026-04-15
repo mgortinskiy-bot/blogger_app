@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import os
 import secrets
+import textwrap
 from collections import defaultdict
 from datetime import datetime, timedelta
 from functools import wraps
 from pathlib import Path
 
 import bcrypt
-from flask import Flask, flash, g, redirect, render_template, request, session, url_for
+from flask import Flask, flash, g, redirect, render_template, request, session, url_for, Response
 from sqlalchemy import func, or_, text
 
 from email_service import send_reset_email
@@ -173,6 +174,81 @@ def unethical_flags(text_in: str) -> list[str]:
         if k in t:
             flags.append(k)
     return sorted(set(flags))
+
+
+def generate_post_text(prompt: str) -> str:
+    p = " ".join((prompt or "").split())
+    if not p:
+        return ""
+    # Нормальный «готовый» пост, чтобы можно было копировать и публиковать.
+    hashtags = ["#реклама", "#партнерство", "#блогер", "#контент"]
+    hook = f"Сохраните, если вам актуально: {p.lower()[:1].upper() + p.lower()[1:]}"
+    body = (
+        f"{hook}\n\n"
+        f"Коротко о задаче:\n"
+        f"— {p}\n\n"
+        f"Что важно:\n"
+        f"1) Польза: объясняю, в чём смысл и почему это работает.\n"
+        f"2) Прозрачно: честно обозначаю условия и ожидания.\n"
+        f"3) Действие: даю понятный следующий шаг.\n\n"
+        f"Мой вывод: если вам нужна понятная интеграция без воды — это отличный вариант.\n\n"
+        f"Вопрос к вам: вы бы попробовали? Напишите «да/нет» и почему.\n\n"
+        f"{' '.join(hashtags)}"
+    )
+    return body
+
+
+def _pick_font_path() -> str | None:
+    candidates = [
+        # Render/Linux (обычно есть DejaVu с кириллицей)
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        # локально Windows может не иметь этих путей — тогда fallback
+    ]
+    for p in candidates:
+        if os.path.exists(p):
+            return p
+    return None
+
+
+def generate_cover_png(prompt: str) -> bytes:
+    # Генерация на лету: не пишем в static (на Render файловая система не гарантирована).
+    from PIL import Image, ImageDraw, ImageFont
+
+    W, H = 1200, 675
+    bg = (12, 6, 24)
+    img = Image.new("RGB", (W, H), bg)
+    d = ImageDraw.Draw(img)
+
+    font_path = _pick_font_path()
+    if font_path:
+        title_font = ImageFont.truetype(font_path, 52)
+        body_font = ImageFont.truetype(font_path, 34)
+        small_font = ImageFont.truetype(font_path, 26)
+    else:
+        title_font = ImageFont.load_default()
+        body_font = ImageFont.load_default()
+        small_font = ImageFont.load_default()
+
+    # рамка
+    d.rounded_rectangle([46, 46, W - 46, H - 46], radius=34, outline=(200, 160, 252), width=6)
+    d.text((74, 78), "Проект Хайп", fill=(233, 213, 255), font=title_font)
+
+    clean = " ".join((prompt or "").split())
+    clean = clean[:220] + ("…" if len(clean) > 220 else "")
+    lines = textwrap.wrap(clean, width=34)[:6]
+    y = 170
+    for ln in lines:
+        d.text((74, y), ln, fill=(244, 240, 255), font=body_font)
+        y += 48
+
+    d.text((74, H - 110), "Готовая обложка для поста • PNG", fill=(168, 155, 200), font=small_font)
+
+    import io
+
+    buf = io.BytesIO()
+    img.save(buf, format="PNG", optimize=True)
+    return buf.getvalue()
 
 
 def login_user(user: User):
@@ -761,36 +837,30 @@ def blogger_offer_action(offer_id: int, action: str):
 @app.route("/tools/generate", methods=["GET", "POST"])
 @require_login
 def tools_generate():
-    # MVP: генерируем текст + изображение-черновик без внешних API
-    from PIL import Image, ImageDraw, ImageFont
     prompt = ""
     generated_text = ""
     img_url = None
     if request.method == "POST":
         prompt = (request.form.get("prompt") or "").strip()
         if prompt:
-            generated_text = (
-                "Черновик поста:\n\n"
-                f"Тема: {prompt}\n\n"
-                "1) Захват внимания: короткий факт/вопрос.\n"
-                "2) Польза: 2–3 тезиса.\n"
-                "3) Личный опыт/пример.\n"
-                "4) Призыв к действию.\n"
-            )
-            img = Image.new("RGB", (1024, 576), (24, 9, 40))
-            d = ImageDraw.Draw(img)
-            title = "Проект Хайп"
-            text_body = (prompt[:140] + "…") if len(prompt) > 140 else prompt
-            d.rounded_rectangle([40, 40, 984, 536], radius=28, outline=(200, 160, 252), width=4)
-            d.text((70, 70), title, fill=(233, 213, 255))
-            d.text((70, 120), text_body, fill=(244, 240, 255))
-            out_dir = BASE_DIR / "static" / "gen"
-            out_dir.mkdir(parents=True, exist_ok=True)
-            name = f"gen_{secrets.token_hex(6)}.png"
-            path = out_dir / name
-            img.save(path, format="PNG")
-            img_url = url_for("static", filename=f"gen/{name}")
-    return render_template("tools_generate.html", prompt=prompt, generated_text=generated_text, img_url=img_url)
+            generated_text = generate_post_text(prompt)
+            img_url = url_for("tools_generate_image") + "?prompt=" + request.form.get("prompt", "")
+    return render_template(
+        "tools_generate.html",
+        prompt=prompt,
+        generated_text=generated_text,
+        img_url=img_url,
+    )
+
+
+@app.route("/tools/generate/image")
+@require_login
+def tools_generate_image():
+    prompt = (request.args.get("prompt") or "").strip()
+    if not prompt:
+        return Response("prompt required", status=400, mimetype="text/plain")
+    png = generate_cover_png(prompt)
+    return Response(png, mimetype="image/png")
 
 
 @app.route("/advertiser/orders/new", methods=["GET", "POST"])
