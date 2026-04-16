@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import html
 import math
 import os
 import secrets
+import xml.etree.ElementTree as ET
 from collections import defaultdict
-from urllib.parse import quote
+from urllib.parse import quote, urljoin, urlparse
 from datetime import datetime, timedelta
 from functools import wraps
 from pathlib import Path
@@ -175,6 +177,216 @@ def unethical_flags(text_in: str) -> list[str]:
         if k in t:
             flags.append(k)
     return sorted(set(flags))
+
+def _clean_text_excerpt(s: str, max_len: int = 900) -> str:
+    t = html.unescape(" ".join((s or "").split()))
+    if not t:
+        return ""
+    if len(t) <= max_len:
+        return t
+    return t[: max_len - 1].rstrip() + "…"
+
+
+def _ensure_http_url(u: str) -> str:
+    raw = (u or "").strip()
+    if not raw:
+        return ""
+    if raw.startswith(("http://", "https://")):
+        return raw
+    return "https://" + raw
+
+
+def _looks_like_feed(xml_text: str) -> bool:
+    head = (xml_text or "").lstrip()[:200].lower()
+    return head.startswith("<?xml") or "<rss" in head or "<feed" in head
+
+
+def _parse_feed_entries(xml_text: str) -> list[dict[str, str]]:
+    """Парсер RSS/Atom (без внешних зависимостей). Возвращает список {title, url, text}."""
+    if not (xml_text or "").strip():
+        return []
+    try:
+        root = ET.fromstring(xml_text)
+    except ET.ParseError:
+        return []
+
+    def strip_ns(tag: str) -> str:
+        return tag.split("}", 1)[-1] if "}" in tag else tag
+
+    entries: list[dict[str, str]] = []
+    rtag = strip_ns(root.tag).lower()
+
+    # RSS: <rss><channel><item>...</item></channel></rss>
+    if rtag == "rss":
+        channel = None
+        for ch in root:
+            if strip_ns(ch.tag).lower() == "channel":
+                channel = ch
+                break
+        if channel is None:
+            return []
+        for it in list(channel):
+            if strip_ns(it.tag).lower() != "item":
+                continue
+            title = ""
+            link = ""
+            desc = ""
+            for el in list(it):
+                k = strip_ns(el.tag).lower()
+                v = (el.text or "").strip()
+                if k == "title":
+                    title = v
+                elif k == "link":
+                    link = v
+                elif k in ("description", "encoded"):
+                    if v and len(v) > len(desc):
+                        desc = v
+            if title or desc or link:
+                entries.append(
+                    {
+                        "title": _clean_text_excerpt(title, 140),
+                        "url": link.strip(),
+                        "text": _clean_text_excerpt(desc or title, 1200),
+                    }
+                )
+        return entries
+
+    # Atom: <feed><entry>...</entry></feed>
+    if rtag == "feed":
+        for e in root.findall(".//"):
+            if strip_ns(e.tag).lower() != "entry":
+                continue
+            title = ""
+            link = ""
+            summary = ""
+            content = ""
+            for el in list(e):
+                k = strip_ns(el.tag).lower()
+                if k == "title":
+                    title = (el.text or "").strip()
+                elif k == "link":
+                    href = (el.attrib or {}).get("href", "").strip()
+                    rel = (el.attrib or {}).get("rel", "").strip().lower()
+                    if href and (not rel or rel == "alternate") and not link:
+                        link = href
+                elif k == "summary":
+                    summary = (el.text or "").strip()
+                elif k == "content":
+                    content = (el.text or "").strip()
+            txt = content or summary or title
+            if title or txt or link:
+                entries.append(
+                    {
+                        "title": _clean_text_excerpt(title, 140),
+                        "url": link.strip(),
+                        "text": _clean_text_excerpt(txt, 1200),
+                    }
+                )
+        return entries
+
+    return []
+
+
+def _discover_feed_candidates(blog_url: str) -> list[str]:
+    u = _ensure_http_url(blog_url)
+    if not u:
+        return []
+    parsed = urlparse(u)
+    base = f"{parsed.scheme}://{parsed.netloc}{parsed.path}".rstrip("/")
+    return [
+        u,  # иногда сам URL уже RSS/Atom
+        base + "/feed",
+        base + "/feed/",
+        base + "/rss",
+        base + "/rss/",
+        base + "/rss.xml",
+        base + "/atom.xml",
+        base + "/feed.xml",
+        base + "/index.xml",
+        base + "/?feed=rss2",
+        base + "/?feed=atom",
+    ]
+
+
+def fetch_latest_posts_from_blog(blog_url: str, limit: int = 3) -> list[dict[str, str]]:
+    """Best-effort: RSS/Atom → HTML fallback. Returns newest-first list."""
+    import requests
+
+    url0 = _ensure_http_url(blog_url)
+    if not url0:
+        return []
+
+    session = requests.Session()
+    session.headers.update(
+        {
+            "User-Agent": "proekt-hayp/1.0 (+auto-fetch posts; contact: admin@proekt-hayp.local)",
+            "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml, text/html;q=0.9, */*;q=0.8",
+        }
+    )
+
+    # 1) RSS/Atom candidates
+    for cand in _discover_feed_candidates(url0):
+        try:
+            r = session.get(cand, timeout=8)
+        except requests.RequestException:
+            continue
+        if r.status_code >= 400:
+            continue
+        txt = (r.text or "").strip()
+        if not txt:
+            continue
+        ctype = (r.headers.get("content-type") or "").lower()
+        if "xml" in ctype or _looks_like_feed(txt):
+            entries = _parse_feed_entries(txt)
+            if entries:
+                out: list[dict[str, str]] = []
+                for e in entries:
+                    link = (e.get("url") or "").strip()
+                    if link and not link.startswith(("http://", "https://")):
+                        link = urljoin(cand, link)
+                    out.append({"title": e.get("title", ""), "url": link, "text": e.get("text", "")})
+                return out[:limit]
+
+    # 2) HTML fallback: parse <article> blocks (requires bs4)
+    try:
+        from bs4 import BeautifulSoup  # type: ignore
+    except Exception:
+        return []
+
+    try:
+        r = session.get(url0, timeout=10)
+        r.raise_for_status()
+    except requests.RequestException:
+        return []
+
+    soup = BeautifulSoup(r.text or "", "html.parser")
+    articles = soup.find_all("article")
+    items: list[dict[str, str]] = []
+
+    for a in articles:
+        title = ""
+        h = a.find(["h1", "h2", "h3"])
+        if h:
+            title = h.get_text(" ", strip=True)
+
+        link = ""
+        al = a.find("a", href=True)
+        if al and al.get("href"):
+            link = urljoin(url0, al["href"])
+
+        ps = a.find_all("p")
+        txt = " ".join([p.get_text(" ", strip=True) for p in ps]) if ps else a.get_text(" ", strip=True)
+        txt = _clean_text_excerpt(txt, 1200)
+        title = _clean_text_excerpt(title, 140)
+
+        if txt:
+            combined = f"{title}\n\n{txt}" if title and not txt.lower().startswith(title.lower()) else txt
+            items.append({"title": title, "url": link, "text": combined})
+
+        if len(items) >= limit:
+            break
+
+    return items[:limit]
 
 
 def generate_post_text(prompt: str) -> str:
@@ -747,6 +959,36 @@ def blogger_update_posts():
             db.add(BloggerPost(blogger_id=user.id, url=urlv, text=textv))
     db.commit()
     flash("Посты обновлены.", "success")
+    return redirect(url_for("blogger_profile"))
+
+
+@app.route("/blogger/posts/fetch", methods=["POST"])
+@require_role(UserRole.BLOGGER)
+def blogger_fetch_posts():
+    db = get_db()
+    user = current_user()
+    blog_url = (user.blog_url or "").strip()
+    if not blog_url:
+        flash("Сначала укажите ссылку на блог в профиле.", "warning")
+        return redirect(url_for("blogger_profile"))
+
+    posts = fetch_latest_posts_from_blog(blog_url, limit=3)
+    if not posts:
+        flash(
+            "Не удалось автоматически найти последние посты по этой ссылке. "
+            "Проверьте URL (лучше RSS/Atom) или используйте ручной ввод ниже.",
+            "warning",
+        )
+        return redirect(url_for("blogger_profile"))
+
+    db.query(BloggerPost).filter(BloggerPost.blogger_id == user.id).delete()
+    for p in posts:
+        txt = (p.get("text") or "").strip()
+        urlv = (p.get("url") or "").strip() or None
+        if txt:
+            db.add(BloggerPost(blogger_id=user.id, url=urlv, text=txt))
+    db.commit()
+    flash("Посты подтянуты из блога.", "success")
     return redirect(url_for("blogger_profile"))
 
 

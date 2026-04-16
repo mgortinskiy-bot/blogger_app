@@ -5,3 +5,5 @@ gunicorn==22.0.0
 psycopg2-binary==2.9.9
 typing-extensions==4.15.0
 pillow==10.4.0
+requests==2.32.3
+beautifulsoup4==4.12.3

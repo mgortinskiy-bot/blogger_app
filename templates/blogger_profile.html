@@ -32,6 +32,12 @@
 
   <div class="card">
     <h3 style="margin-top:0;">3 последних поста</h3>
+    <div class="muted" style="margin-bottom:0.75rem;">
+      Можно подтянуть автоматически по ссылке на блог (лучше, если это RSS/Atom или сайт с лентой).
+    </div>
+    <form method="post" action="{{ url_for('blogger_fetch_posts') }}" style="margin-bottom:1rem;">
+      <button class="btn btn-primary" type="submit">Подтянуть из блога</button>
+    </form>
     <form method="post" action="{{ url_for('blogger_update_posts') }}" class="form" style="max-width:none;">
       {% for i in range(1,4) %}
       <div>
