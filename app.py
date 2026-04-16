@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import math
 import os
 import secrets
 import textwrap
 from collections import defaultdict
+from urllib.parse import quote
 from datetime import datetime, timedelta
 from functools import wraps
 from pathlib import Path
@@ -177,33 +179,42 @@ def unethical_flags(text_in: str) -> list[str]:
 
 
 def generate_post_text(prompt: str) -> str:
+    """Готовый текст поста: польза, условия/ожидания и шаг — в содержании, не в виде мета-списка."""
     p = " ".join((prompt or "").split())
     if not p:
         return ""
-    # Нормальный «готовый» пост, чтобы можно было копировать и публиковать.
     hashtags = ["#реклама", "#партнерство", "#блогер", "#контент"]
-    hook = f"Сохраните, если вам актуально: {p.lower()[:1].upper() + p.lower()[1:]}"
-    body = (
-        f"{hook}\n\n"
-        f"Коротко о задаче:\n"
-        f"— {p}\n\n"
-        f"Что важно:\n"
-        f"1) Польза: объясняю, в чём смысл и почему это работает.\n"
-        f"2) Прозрачно: честно обозначаю условия и ожидания.\n"
-        f"3) Действие: даю понятный следующий шаг.\n\n"
-        f"Мой вывод: если вам нужна понятная интеграция без воды — это отличный вариант.\n\n"
-        f"Вопрос к вам: вы бы попробовали? Напишите «да/нет» и почему.\n\n"
+    lead = p[0].upper() + p[1:] if len(p) > 1 else p.upper()
+    hook = f"Сохраните, если вам актуально: {lead}"
+
+    benefit = (
+        f"В чём польза: разберём {p.lower()} так, чтобы подписчикам было понятно «зачем мне это» "
+        f"и как это улучшит их повседневность — без давления и без лишних обещаний. "
+        f"Я показываю сценарий использования и отвечаю на типичные сомнения, чтобы решение выглядело живым и проверяемым."
+    )
+    terms = (
+        f"Условия и ожидания: заранее фиксируем формат (сторис/пост/обзор), сроки, обязательные формулировки и маркировку "
+        f"({hashtags[0]}). Ориентир по срокам — как договоримся; правки — в разумных пределах согласно брифу. "
+        f"Если что-то невозможно честно показать — скажу прямо, чтобы не подводить ни аудиторию, ни бренд."
+    )
+    cta = (
+        f"Следующий шаг: напишите в комментариях одно слово «ХОЧУ» или в директ — «интеграция», "
+        f"и я пришлю короткий план контента и варианты заголовков под ваш запрос: «{lead}»."
+    )
+    closing = (
+        "Вопрос к вам: что для вас важнее в такой интеграции — скорость, детальность или эмоция? Ответьте одним словом.\n\n"
         f"{' '.join(hashtags)}"
     )
-    return body
+    return "\n\n".join([hook, benefit, terms, cta, closing])
 
 
 def _pick_font_path() -> str | None:
     candidates = [
-        # Render/Linux (обычно есть DejaVu с кириллицей)
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
         "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-        # локально Windows может не иметь этих путей — тогда fallback
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "C:/Windows/Fonts/segoeuib.ttf",
+        "C:/Windows/Fonts/segoeui.ttf",
+        "C:/Windows/Fonts/arial.ttf",
     ]
     for p in candidates:
         if os.path.exists(p):
@@ -211,43 +222,146 @@ def _pick_font_path() -> str | None:
     return None
 
 
+def _theme_from_prompt(prompt: str) -> tuple[str, tuple[int, int, int], tuple[int, int, int]]:
+    """Сцена + два цвета для вертикального градиента (верх → низ)."""
+    low = (prompt or "").lower()
+    if any(k in low for k in ("спорт", "фитнес", "трен", "зал", "марафон")):
+        return "fitness", (18, 32, 64), (255, 94, 58)
+    if any(k in low for k in ("еда", "рецепт", "кафе", "рестор", "кухн", "продукт", "меню")):
+        return "food", (60, 24, 8), (255, 186, 72)
+    if any(k in low for k in ("прилож", "it", "сайт", "техн", "гаджет", "софт", "код")):
+        return "tech", (8, 18, 48), (0, 180, 220)
+    if any(k in low for k in ("красот", "космет", "уход", "макияж", "салон")):
+        return "beauty", (48, 12, 40), (255, 120, 160)
+    if any(k in low for k in ("путешеств", "тур", "отель", "авиа", "город")):
+        return "travel", (12, 40, 72), (255, 210, 120)
+    if any(k in low for k in ("курс", "обучен", "урок", "школ", "лекци")):
+        return "edu", (20, 36, 70), (120, 200, 255)
+    return "default", (14, 10, 36), (90, 40, 140)
+
+
+def _gradient_vertical(img, top: tuple[int, int, int], bottom: tuple[int, int, int]) -> None:
+    from PIL import ImageDraw
+
+    W, H = img.size
+    draw = ImageDraw.Draw(img)
+    for y in range(H):
+        t = y / max(H - 1, 1)
+        r = int(top[0] + (bottom[0] - top[0]) * t)
+        g = int(top[1] + (bottom[1] - top[1]) * t)
+        b = int(top[2] + (bottom[2] - top[2]) * t)
+        draw.line([(0, y), (W, y)], fill=(r, g, b))
+
+
+def _draw_cover_motif(d, scene: str, W: int, H: int) -> None:
+    """Тематические фигуры: акцент на образе, не на наборе строк."""
+    cx, cy = W // 2, H // 2 + 10
+
+    def star(x: int, y: int, r: int, fill):
+        pts = [
+            (x, y - r),
+            (x + r // 3, y - r // 4),
+            (x + r, y),
+            (x + r // 3, y + r // 4),
+            (x, y + r),
+            (x - r // 3, y + r // 4),
+            (x - r, y),
+            (x - r // 3, y - r // 4),
+        ]
+        d.polygon(pts, fill=fill)
+
+    if scene == "fitness":
+        d.rounded_rectangle([cx - 140, cy - 28, cx - 48, cy + 28], radius=12, fill=(255, 255, 255, 38))
+        d.rounded_rectangle([cx + 48, cy - 28, cx + 140, cy + 28], radius=12, fill=(255, 255, 255, 38))
+        d.rounded_rectangle([cx - 48, cy - 14, cx + 48, cy + 14], radius=6, fill=(255, 255, 255, 55))
+        for i, ox in enumerate(range(-200, 220, 55)):
+            star(cx + ox, cy - 120 - (i % 3) * 15, 12 + (i % 4), (255, 220, 180))
+    elif scene == "food":
+        d.ellipse([cx - 90, cy - 40, cx + 90, cy + 50], outline=(255, 230, 200), width=8)
+        d.arc([cx - 70, cy - 80, cx + 70, cy + 20], start=200, end=340, fill=(255, 200, 140), width=10)
+        d.ellipse([cx - 22, cy - 8, cx + 22, cy + 28], fill=(255, 140, 90))
+    elif scene == "tech":
+        d.rounded_rectangle([cx - 100, cy - 130, cx + 100, cy + 110], radius=28, outline=(180, 240, 255), width=10)
+        d.rounded_rectangle([cx - 85, cy - 115, cx + 85, cy + 70], radius=8, fill=(20, 60, 90))
+        d.ellipse([cx - 8, cy + 88, cx + 8, cy + 102], fill=(180, 240, 255))
+        for i in range(5):
+            d.line([(cx - 70 + i * 35, cy - 95), (cx - 50 + i * 35, cy - 40)], fill=(0, 220, 200), width=4)
+    elif scene == "beauty":
+        for ang in range(0, 360, 45):
+            rad = math.radians(ang)
+            x1 = cx + int(100 * math.cos(rad))
+            y1 = cy + int(100 * math.sin(rad))
+            d.line([(cx, cy), (x1, y1)], fill=(255, 180, 210), width=6)
+        d.ellipse([cx - 40, cy - 40, cx + 40, cy + 40], fill=(255, 120, 160))
+    elif scene == "travel":
+        d.polygon([(cx - 160, cy + 80), (cx, cy - 120), (cx + 160, cy + 80)], fill=(40, 90, 140))
+        d.circle((cx - 220, cy - 40), 48, fill=(255, 220, 140))
+        d.polygon([(cx + 200, cy + 40), (cx + 260, cy + 40), (cx + 230, cy + 10)], fill=(200, 220, 255))
+    elif scene == "edu":
+        d.rounded_rectangle([cx - 70, cy - 100, cx + 70, cy + 100], radius=8, fill=(255, 255, 255, 25))
+        for i in range(4):
+            d.line([(cx - 55, cy - 70 + i * 35), (cx + 55, cy - 70 + i * 35)], fill=(200, 230, 255), width=4)
+        d.polygon([(cx - 30, cy - 130), (cx + 30, cy - 130), (cx, cy - 70)], fill=(255, 210, 120))
+    else:
+        # мотивация «к действию»: ракета / рост
+        d.polygon([(cx - 40, cy + 60), (cx + 40, cy + 60), (cx + 10, cy - 100), (cx - 10, cy - 100)], fill=(255, 200, 120))
+        d.polygon([(cx - 12, cy + 20), (cx + 12, cy + 20), (cx, cy + 90)], fill=(255, 120, 90))
+        for i in range(8):
+            y0 = cy + 100 + i * 18
+            d.line([(cx - 30 - i * 5, y0), (cx + 30 + i * 5, y0)], fill=(255, 180, 100), width=3)
+        star(cx, cy - 140, 28, (255, 255, 200))
+
+    # лёгкие блики (общие)
+    for x, y, r in [(80, 100, 3), (W - 120, 80, 4), (W - 90, H - 140, 3), (100, H - 100, 2)]:
+        d.ellipse([x - r, y - r, x + r, y + r], fill=(255, 255, 255, 60))
+
+
 def generate_cover_png(prompt: str) -> bytes:
-    # Генерация на лету: не пишем в static (на Render файловая система не гарантирована).
     from PIL import Image, ImageDraw, ImageFont
 
     W, H = 1200, 675
-    bg = (12, 6, 24)
-    img = Image.new("RGB", (W, H), bg)
+    scene, c_top, c_bot = _theme_from_prompt(prompt)
+    img = Image.new("RGBA", (W, H), (0, 0, 0, 255))
+    rgb = Image.new("RGB", (W, H))
+    _gradient_vertical(rgb, c_top, c_bot)
+    img.paste(rgb)
+
+    overlay = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    od = ImageDraw.Draw(overlay)
+    _draw_cover_motif(od, scene, W, H)
+    img = Image.alpha_composite(img, overlay)
     d = ImageDraw.Draw(img)
 
     font_path = _pick_font_path()
     if font_path:
-        title_font = ImageFont.truetype(font_path, 52)
-        body_font = ImageFont.truetype(font_path, 34)
-        small_font = ImageFont.truetype(font_path, 26)
+        brand_font = ImageFont.truetype(font_path, 30)
+        cta_font = ImageFont.truetype(font_path, 36)
     else:
-        title_font = ImageFont.load_default()
-        body_font = ImageFont.load_default()
-        small_font = ImageFont.load_default()
+        brand_font = ImageFont.load_default()
+        cta_font = ImageFont.load_default()
 
-    # рамка
-    d.rounded_rectangle([46, 46, W - 46, H - 46], radius=34, outline=(200, 160, 252), width=6)
-    d.text((74, 78), "Проект Хайп", fill=(233, 213, 255), font=title_font)
+    d.rounded_rectangle([36, 36, W - 36, H - 36], radius=28, outline=(255, 255, 255, 55), width=4)
+    d.text((56, 48), "Проект Хайп", fill=(255, 255, 255, 230), font=brand_font)
 
-    clean = " ".join((prompt or "").split())
-    clean = clean[:220] + ("…" if len(clean) > 220 else "")
-    lines = textwrap.wrap(clean, width=34)[:6]
-    y = 170
-    for ln in lines:
-        d.text((74, y), ln, fill=(244, 240, 255), font=body_font)
-        y += 48
-
-    d.text((74, H - 110), "Готовая обложка для поста • PNG", fill=(168, 155, 200), font=small_font)
+    ctas = {
+        "fitness": "Сильнее с каждым шагом",
+        "food": "Попробуйте новый вкус",
+        "tech": "Упростите себе задачу",
+        "beauty": "Выберите заботу о себе",
+        "travel": "Откройте новый маршрут",
+        "edu": "Начните с ясного плана",
+        "default": "Ваш следующий шаг — сейчас",
+    }
+    line = ctas[scene]
+    bbox = d.textbbox((0, 0), line, font=cta_font)
+    tw = bbox[2] - bbox[0]
+    d.text(((W - tw) // 2, H - 95), line, fill=(255, 255, 255, 245), font=cta_font)
 
     import io
 
     buf = io.BytesIO()
-    img.save(buf, format="PNG", optimize=True)
+    out = img.convert("RGB")
+    out.save(buf, format="PNG", optimize=True)
     return buf.getvalue()
 
 
@@ -844,7 +958,7 @@ def tools_generate():
         prompt = (request.form.get("prompt") or "").strip()
         if prompt:
             generated_text = generate_post_text(prompt)
-            img_url = url_for("tools_generate_image") + "?prompt=" + request.form.get("prompt", "")
+            img_url = url_for("tools_generate_image") + "?prompt=" + quote(prompt, safe="")
     return render_template(
         "tools_generate.html",
         prompt=prompt,
