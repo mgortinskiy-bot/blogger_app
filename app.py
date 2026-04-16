@@ -3,7 +3,6 @@ from __future__ import annotations
 import math
 import os
 import secrets
-import textwrap
 from collections import defaultdict
 from urllib.parse import quote
 from datetime import datetime, timedelta
