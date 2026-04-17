@@ -348,6 +348,57 @@ def _telegram_rsshub_candidates(url0: str) -> list[str]:
     ]
 
 
+def _telegram_html_candidates(url0: str) -> list[str]:
+    """Кандидаты Telegram Web pages (t.me/s/...) для парсинга HTML."""
+    ch = _telegram_channel_from_url(url0)
+    if not ch:
+        return []
+    return [
+        f"https://t.me/s/{ch}",
+        f"https://t.me/{ch}",
+    ]
+
+
+def _fetch_telegram_posts_from_html(session, url0: str, limit: int) -> list[dict[str, str]]:
+    """Парсит публичную web-страницу Telegram канала и вытаскивает несколько последних постов."""
+    try:
+        from bs4 import BeautifulSoup  # type: ignore
+    except Exception:
+        return []
+
+    for page_url in _telegram_html_candidates(url0):
+        try:
+            r = session.get(page_url, timeout=12)
+        except Exception:
+            continue
+        if r.status_code >= 400:
+            continue
+        soup = BeautifulSoup(r.text or "", "html.parser")
+        # Telegram web показывает сообщения в .tgme_widget_message_wrap / .tgme_widget_message
+        blocks = soup.select(".tgme_widget_message_wrap")
+        if not blocks:
+            blocks = soup.select(".tgme_widget_message")
+        items: list[dict[str, str]] = []
+        for b in blocks:
+            txt_node = b.select_one(".tgme_widget_message_text")
+            if not txt_node:
+                continue
+            txt = txt_node.get_text(" ", strip=True)
+            txt = _clean_text_excerpt(txt, 1400)
+            if not txt:
+                continue
+            link = ""
+            a = b.select_one("a.tgme_widget_message_date")
+            if a and a.get("href"):
+                link = str(a.get("href"))
+            items.append({"title": "", "url": link, "text": txt})
+            if len(items) >= limit:
+                break
+        if items:
+            return items[:limit]
+    return []
+
+
 def fetch_latest_posts_from_blog(blog_url: str, limit: int = 3) -> list[dict[str, str]]:
     """Best-effort: RSS/Atom → HTML fallback. Returns newest-first list."""
     import requests
@@ -363,6 +414,12 @@ def fetch_latest_posts_from_blog(blog_url: str, limit: int = 3) -> list[dict[str
             "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml, text/html;q=0.9, */*;q=0.8",
         }
     )
+
+    # 0) Telegram: сначала пытаемся вытащить посты прямо со страницы t.me/s/<канал>.
+    if _telegram_channel_from_url(url0):
+        items = _fetch_telegram_posts_from_html(session, url0, limit)
+        if items:
+            return items[:limit]
 
     # 0) Telegram: t.me обычно не отдаёт RSS/Atom, поэтому используем RSSHub (если доступен).
     for cand in _telegram_rsshub_candidates(url0):
