@@ -65,5 +65,23 @@
     {% endif %}
   </div>
 </div>
+
+<div class="card" style="margin-top:1rem;">
+  <h3 style="margin-top:0;">Сервисы для блогера (в проработке)</h3>
+  <p class="muted" style="margin-top:0;">
+    Идея: развивать блогера как бизнес — сервис, документы и аналитика в одном месте.
+  </p>
+  <div style="display:flex;flex-wrap:wrap;gap:0.6rem;">
+    <form method="post" action="{{ url_for('blogger_self_employed') }}">
+      <button class="btn btn-ghost" type="submit">Оформить самозанятость</button>
+    </form>
+    <form method="post" action="{{ url_for('blogger_register_ip') }}">
+      <button class="btn btn-ghost" type="submit">Оформить ИП</button>
+    </form>
+    <form method="post" action="{{ url_for('blogger_payout_to_bank') }}">
+      <button class="btn btn-primary" type="submit">Вывести баллы на счёт</button>
+    </form>
+  </div>
+</div>
 {% endblock %}
 

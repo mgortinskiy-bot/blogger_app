@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}AI помощник{% endblock %}
+{% block content %}
+<section class="hero" style="padding-top:2rem;text-align:left;">
+  <h1 style="text-align:left;">AI помощник</h1>
+  <p class="hero-lead" style="margin-left:0;text-align:left;">
+    Подскажу по функциям сайта и концепции «блогер как бизнес»: сервис, аналитика, школа и развитие в одном месте.
+  </p>
+</section>
+
+<div class="card" style="max-width:900px;">
+  <div class="muted" style="margin-bottom:0.75rem;">
+    Примеры вопросов: «Как блогеру набрать баллы?», «Как бренду найти блогеров?», «Что будет добавлено дальше?»
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:0.75rem;margin-bottom:1rem;">
+    {% for m in chat %}
+      <div class="card" style="background:rgba(0,0,0,0.18);">
+        <div class="muted" style="font-size:0.85rem;margin-bottom:0.25rem;">{{ "Вы" if m.role == "user" else "AI помощник" }}</div>
+        <div style="white-space:pre-wrap;">{{ m.content }}</div>
+      </div>
+    {% endfor %}
+    {% if not chat %}
+      <div class="muted">Пока тут пусто — задайте первый вопрос.</div>
+    {% endif %}
+  </div>
+
+  <form method="post" class="form" style="max-width:none;">
+    <div>
+      <label for="message">Ваш вопрос</label>
+      <textarea id="message" name="message" placeholder="Например: как подтянуть посты из Telegram?"></textarea>
+    </div>
+    <div style="display:flex;gap:0.6rem;flex-wrap:wrap;">
+      <button class="btn btn-primary" type="submit">Отправить</button>
+      <button class="btn btn-ghost" type="submit" name="reset" value="1">Очистить чат</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+

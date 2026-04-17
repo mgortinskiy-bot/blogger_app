@@ -308,6 +308,46 @@ def _discover_feed_candidates(blog_url: str) -> list[str]:
     ]
 
 
+def _telegram_channel_from_url(url0: str) -> str | None:
+    """Из t.me URL пытается вытащить username канала."""
+    try:
+        p = urlparse(url0)
+    except Exception:
+        return None
+    host = (p.netloc or "").lower()
+    if host not in ("t.me", "telegram.me", "www.t.me", "www.telegram.me"):
+        return None
+    path = (p.path or "").strip("/")
+    if not path:
+        return None
+    parts = [x for x in path.split("/") if x]
+    if not parts:
+        return None
+    # варианты: /channel, /s/channel, /channel/123
+    if parts[0] == "s" and len(parts) >= 2:
+        cand = parts[1]
+    else:
+        cand = parts[0]
+    cand = cand.lstrip("@")
+    if not cand:
+        return None
+    if not all(ch.isalnum() or ch == "_" for ch in cand):
+        return None
+    return cand
+
+
+def _telegram_rsshub_candidates(url0: str) -> list[str]:
+    """RSSHub для Telegram каналов. Требует доступный RSSHub и публичный канал."""
+    ch = _telegram_channel_from_url(url0)
+    if not ch:
+        return []
+    base = (os.environ.get("RSSHUB_BASE_URL") or "https://rsshub.app").rstrip("/")
+    return [
+        f"{base}/telegram/channel/{ch}",
+        f"{base}/telegram/channel/{ch}/rss",
+    ]
+
+
 def fetch_latest_posts_from_blog(blog_url: str, limit: int = 3) -> list[dict[str, str]]:
     """Best-effort: RSS/Atom → HTML fallback. Returns newest-first list."""
     import requests
@@ -323,6 +363,27 @@ def fetch_latest_posts_from_blog(blog_url: str, limit: int = 3) -> list[dict[str
             "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml, text/html;q=0.9, */*;q=0.8",
         }
     )
+
+    # 0) Telegram: t.me обычно не отдаёт RSS/Atom, поэтому используем RSSHub (если доступен).
+    for cand in _telegram_rsshub_candidates(url0):
+        try:
+            r = session.get(cand, timeout=10)
+        except requests.RequestException:
+            continue
+        if r.status_code >= 400:
+            continue
+        txt = (r.text or "").strip()
+        if not txt:
+            continue
+        entries = _parse_feed_entries(txt)
+        if entries:
+            out: list[dict[str, str]] = []
+            for e in entries:
+                link = (e.get("url") or "").strip()
+                if link and not link.startswith(("http://", "https://")):
+                    link = urljoin(cand, link)
+                out.append({"title": e.get("title", ""), "url": link, "text": e.get("text", "")})
+            return out[:limit]
 
     # 1) RSS/Atom candidates
     for cand in _discover_feed_candidates(url0):
@@ -629,6 +690,118 @@ def require_role(*roles: str):
 @app.context_processor
 def inject_user():
     return {"current_user": current_user()}
+
+
+def _assistant_knowledge_base() -> list[tuple[list[str], str]]:
+    """Простая база знаний для ответа без внешних AI API."""
+    return [
+        (
+            ["концепц", "идея", "зачем", "мисси", "бизнес"],
+            "Концепция «блогер как бизнес»: мы собираем в одном месте заказы от брендов, профиль/портфолио, аналитику и сервисы.\n"
+            "Дальше планируется школа блогеров и продвинутая аналитика, чтобы блогер мог расти системно (контент → метрики → монетизация).",
+        ),
+        (
+            ["как", "заказ", "блогер", "взять", "предложен"],
+            "Блогеру: откройте «Заказы», выберите подходящий и нажмите «Взять в работу». Предложения от брендов — во вкладке «Предложения».",
+        ),
+        (
+            ["бренд", "реклам", "блогер", "найти"],
+            "Бренду: создайте заказ («Создать заказ»), затем в разделе «Блогеры» можно искать и отправлять предложения по конкретному заказу.",
+        ),
+        (
+            ["балл", "вывод", "счёт", "деньги"],
+            "Баллы начисляются за выполненные заказы. Вывод на банковский счёт сейчас в проработке (кнопка есть как заглушка).",
+        ),
+        (
+            ["телеграм", "telegram", "t.me", "пост", "подтянуть"],
+            "Telegram не отдаёт RSS напрямую. Мы подтягиваем посты через RSSHub.\n"
+            "Если у вас `blog_url` вида `t.me/<канал>`, убедитесь, что канал публичный, а RSSHub доступен. "
+            "При необходимости задайте переменную `RSSHUB_BASE_URL` (например, на свой инстанс RSSHub).",
+        ),
+        (
+            ["генератор", "обложк", "пост", "картинк"],
+            "В «Генераторе» вы вводите задачу/идею — система выдаёт готовый текст (с пользой, условиями и следующим шагом) и тематическую обложку PNG.",
+        ),
+    ]
+
+
+def assistant_answer(question: str, *, user_role: str | None) -> str:
+    q = " ".join((question or "").split())
+    if not q:
+        return "Сформулируйте вопрос — и я подскажу."
+
+    # 1) Optional: OpenAI (если задан ключ)
+    api_key = (os.environ.get("OPENAI_API_KEY") or "").strip()
+    if api_key:
+        try:
+            import requests
+
+            model = (os.environ.get("OPENAI_MODEL") or "gpt-4o-mini").strip()
+            system = (
+                "Ты помощник веб-сервиса «Проект Хайп».\n"
+                "Задача: помогать пользователю разобраться в функциях сайта и в концепции "
+                "«блогер как бизнес»: сервис и аналитика в одном месте. Отвечай по-русски, кратко и по делу.\n"
+                "Если спрашивают про будущие функции (школа блогеров, продвинутая аналитика) — говори, что это в планах."
+            )
+            payload = {
+                "model": model,
+                "messages": [
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": f"Роль пользователя: {user_role or 'unknown'}\nВопрос: {q}"},
+                ],
+                "temperature": 0.4,
+            }
+            r = requests.post(
+                "https://api.openai.com/v1/chat/completions",
+                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                json=payload,
+                timeout=20,
+            )
+            if r.status_code < 400:
+                data = r.json()
+                msg = (((data.get("choices") or [{}])[0]).get("message") or {}).get("content") or ""
+                msg = msg.strip()
+                if msg:
+                    return msg
+        except Exception:
+            pass
+
+    # 2) Fallback: встроенная база знаний
+    low = q.lower()
+    for keys, answer in _assistant_knowledge_base():
+        if any(k in low for k in keys):
+            return answer
+
+    return (
+        "Я могу подсказать по функциям сайта: заказы, предложения, профиль, генератор, анализ постов.\n"
+        "Уточните, что именно хотите сделать, и вашу роль (блогер/бренд)."
+    )
+
+
+@app.route("/assistant", methods=["GET", "POST"])
+@require_login
+def assistant_chat():
+    chat = session.get("assistant_chat") or []
+    if not isinstance(chat, list):
+        chat = []
+
+    if request.method == "POST":
+        if request.form.get("reset") == "1":
+            session["assistant_chat"] = []
+            flash("Чат очищен.", "info")
+            return redirect(url_for("assistant_chat"))
+
+        msg = (request.form.get("message") or "").strip()
+        if msg:
+            chat.append({"role": "user", "content": msg})
+            user = current_user()
+            ans = assistant_answer(msg, user_role=getattr(user, "role", None) if user else None)
+            chat.append({"role": "assistant", "content": ans})
+            # ограничим историю
+            session["assistant_chat"] = chat[-20:]
+        return redirect(url_for("assistant_chat"))
+
+    return render_template("assistant.html", chat=session.get("assistant_chat") or [])
 
 
 @app.route("/")
@@ -989,6 +1162,27 @@ def blogger_fetch_posts():
             db.add(BloggerPost(blogger_id=user.id, url=urlv, text=txt))
     db.commit()
     flash("Посты подтянуты из блога.", "success")
+    return redirect(url_for("blogger_profile"))
+
+
+@app.route("/blogger/legal/self-employed", methods=["POST"])
+@require_role(UserRole.BLOGGER)
+def blogger_self_employed():
+    flash("Функция оформления самозанятости в проработке.", "info")
+    return redirect(url_for("blogger_profile"))
+
+
+@app.route("/blogger/legal/ip", methods=["POST"])
+@require_role(UserRole.BLOGGER)
+def blogger_register_ip():
+    flash("Функция оформления ИП в проработке.", "info")
+    return redirect(url_for("blogger_profile"))
+
+
+@app.route("/blogger/payouts/bank", methods=["POST"])
+@require_role(UserRole.BLOGGER)
+def blogger_payout_to_bank():
+    flash("Вывод баллов на банковский счёт в проработке.", "info")
     return redirect(url_for("blogger_profile"))
 
 
