@@ -3,6 +3,7 @@ from __future__ import annotations
 import html
 import math
 import os
+import re
 import secrets
 import xml.etree.ElementTree as ET
 from collections import defaultdict
@@ -879,18 +880,160 @@ def _heuristic_audience_analysis(text_in: str) -> str:
     )
 
 
+def _telegram_preview_url(url: str) -> str:
+    """Публичное превью Telegram с разметкой tgme — у страниц вида /s/…"""
+    u = _ensure_http_url(url)
+    try:
+        p = urlparse(u)
+    except Exception:
+        return url
+    host = (p.netloc or "").lower()
+    if host.startswith("www."):
+        host = host[4:]
+    if host not in ("t.me", "telegram.me"):
+        return u
+    parts = [x for x in (p.path or "").strip("/").split("/") if x]
+    if not parts:
+        return u
+    if parts[0] == "s":
+        return f"https://t.me/{'/'.join(parts)}"
+    # t.me/username/123 — без /s/ Telegram отдаёт «лёгкую» страницу без виджетов
+    if len(parts) >= 2 and re.match(r"^\d+$", parts[1]):
+        return f"https://t.me/s/{parts[0]}/{parts[1]}"
+    return u
+
+
+def _telegram_engagement_from_page(session, url: str) -> str:
+    """Со страницы t.me извлекает просмотры, реакции и дату (комментарии в HTML обычно недоступны)."""
+    try:
+        from bs4 import BeautifulSoup  # type: ignore
+    except Exception:
+        return "BeautifulSoup недоступен."
+    candidates: list[str] = []
+    pu = _telegram_preview_url(url)
+    candidates.append(pu)
+    canon = _ensure_http_url(url).rstrip("/")
+    if pu.rstrip("/") != canon:
+        candidates.append(canon)
+    last_exc: Exception | None = None
+    w = None
+    for fetch_url in candidates:
+        try:
+            r = session.get(fetch_url, timeout=14)
+            r.raise_for_status()
+            soup = BeautifulSoup(r.text, "html.parser")
+            w = soup.select_one(".tgme_widget_message_wrap") or soup.select_one(".tgme_widget_message")
+            if w:
+                break
+        except Exception as exc:
+            last_exc = exc
+            continue
+    if not w:
+        return (
+            "Не удалось найти блок поста в HTML (пост удалён, приватный или недоступная ссылка). "
+            f"{'Ошибка: ' + str(last_exc) if last_exc else ''}"
+        )
+    views_el = w.select_one(".tgme_widget_message_views")
+    views = views_el.get_text(strip=True) if views_el else "—"
+    reactions = [x.get_text(strip=True) for x in w.select("span.tgme_reaction")]
+    rx = ", ".join(reactions) if reactions else "реакции не найдены в HTML"
+    dt_el = w.select_one("time")
+    when = (dt_el.get("datetime") or dt_el.get_text(strip=True) or "—") if dt_el else "—"
+    return (
+        f"Дата поста: {when}. Просмотры: {views}. Реакции (эмодзи+число): {rx}. "
+        f"Примечание: в открытом HTML Telegram редко доступны комментарии; ориентируйся на реакции и просмотры."
+    )
+
+
+def _generic_comments_from_page(session, url: str) -> str:
+    try:
+        from bs4 import BeautifulSoup  # type: ignore
+    except Exception:
+        return "BeautifulSoup недоступен."
+    try:
+        r = session.get(url, timeout=14)
+        r.raise_for_status()
+    except Exception as exc:
+        return f"Ошибка загрузки: {exc}"
+    soup = BeautifulSoup(r.text, "html.parser")
+    texts: list[str] = []
+    for sel in (
+        "article.comment",
+        ".comment-content",
+        ".comment-body",
+        "li.comment",
+        ".wp-block-comment-content",
+        ".comments-area .comment",
+    ):
+        for node in soup.select(sel):
+            t = node.get_text(" ", strip=True)
+            if 12 < len(t) < 1500:
+                texts.append(t)
+        if len(texts) >= 12:
+            break
+    if texts:
+        uniq = []
+        seen = set()
+        for t in texts:
+            key = t[:80]
+            if key in seen:
+                continue
+            seen.add(key)
+            uniq.append(t)
+        lines = [f"- {x[:500]}" for x in uniq[:30]]
+        return "Найденные комментарии (фрагменты):\n" + "\n".join(lines)
+    return "Комментарии на странице не найдены (другая вёрстка или подгрузка через JavaScript)."
+
+
+def build_audience_raw_from_posts(posts: list) -> str:
+    """По ссылкам 3 постов подтягивает реакции/просмотры (Telegram) или комментарии (блог)."""
+    import requests
+
+    if not posts:
+        return ""
+    session = requests.Session()
+    session.headers.update(
+        {
+            "User-Agent": "proekt-hayp/1.0 (+audience; blogger analytics)",
+            "Accept": "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8",
+        }
+    )
+    blocks: list[str] = []
+    for i, p in enumerate(posts, 1):
+        u = (getattr(p, "url", None) or "").strip()
+        frag = _clean_text_excerpt(getattr(p, "text", None) or "", 500)
+        if not u:
+            blocks.append(f"Пост {i} (ссылка не указана — подтяните посты из блога или добавьте URL вручную).\nФрагмент текста: {frag}")
+            continue
+        try:
+            parsed = urlparse(u)
+        except Exception:
+            blocks.append(f"Пост {i}: некорректная ссылка {u}")
+            continue
+        host = (parsed.netloc or "").lower().removeprefix("www.")
+        if host in ("t.me", "telegram.me"):
+            eng = _telegram_engagement_from_page(session, u)
+            blocks.append(f"Пост {i}: {u}\n{eng}\nФрагмент текста поста: {frag}")
+        else:
+            cm = _generic_comments_from_page(session, u)
+            blocks.append(f"Пост {i}: {u}\n{cm}\nФрагмент текста поста: {frag}")
+    return "\n\n".join(blocks).strip()
+
+
 def analyze_audience_feedback(comments: str) -> str:
     """Тема реакций + позитив/негатив; сначала LLM (Pollinations), иначе эвристика."""
     raw = " ".join((comments or "").split())
     if not raw:
         return ""
     prompt = (
-        "Ты аналитик соцсетей. Проанализируй комментарии и реакции аудитории к посту блогера.\n"
+        "Ты аналитик соцсетей. Ниже — данные по аудитории для 1–3 постов блогера: "
+        "комментарии (если удалось извлечь с сайта) и/или просмотры и эмодзи-реакции Telegram.\n"
+        "Если комментариев нет, делай выводы по реакциям и просмотрам + по фрагментам текста постов.\n"
         "Ответ структурируй по-русски:\n"
-        "1) Основная тема обсуждения (1–3 предложения).\n"
-        "2) Тональность: одно слово из списка — позитивно / негативно / смешанно / нейтрально — и краткое объяснение.\n"
+        "1) Основная тема реакций / интереса аудитории (1–3 предложения).\n"
+        "2) Тональность: позитивно / негативно / смешанно / нейтрально — одно слово и краткое объяснение.\n"
         "3) Рекомендация блогеру (2–4 предложения).\n\n"
-        "Текст комментариев и реакций:\n"
+        "Данные:\n"
         f"{raw[:4000]}"
     )
     llm = llm_pollinations_text(prompt, max_prompt_chars=3000)
@@ -1379,11 +1522,14 @@ def blogger_analyze_posts():
         .limit(3)
         .all()
     )
+    if not posts:
+        flash("Нет сохранённых постов. Сначала подтяните из блога или введите тексты постов.", "warning")
+        return redirect(url_for("blogger_profile"))
     joined = "\n\n".join([p.text for p in posts])
     summary = summarize_text(joined)
     flags = unethical_flags(joined)
-    audience_raw = (request.form.get("audience_feedback") or "").strip()
-    audience_insights = analyze_audience_feedback(audience_raw) if audience_raw else None
+    audience_raw = build_audience_raw_from_posts(posts)
+    audience_insights = analyze_audience_feedback(audience_raw) if audience_raw.strip() else None
     db.add(
         BloggerPostAnalysis(
             blogger_id=user.id,
@@ -1398,8 +1544,7 @@ def blogger_analyze_posts():
         flash("Найдены потенциально неэтичные темы/слова: " + ", ".join(flags), "warning")
     else:
         flash("Проверка пройдена: явных неэтичных слов/тем не найдено.", "success")
-    if audience_raw:
-        flash("Анализ комментариев и реакций добавлен.", "info")
+    flash("Аудитория: собраны просмотры/реакции (Telegram) или комментарии (сайт) по ссылкам постов.", "info")
     return redirect(url_for("blogger_profile"))
 
 

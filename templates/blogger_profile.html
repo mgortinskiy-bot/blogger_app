@@ -52,11 +52,10 @@
       <button class="btn btn-ghost" type="submit">Сохранить посты</button>
     </form>
 
-    <form method="post" action="{{ url_for('blogger_analyze_posts') }}" class="form" style="margin-top:1rem;max-width:none;">
-      <div>
-        <label for="audience_feedback">Комментарии и реакции аудитории (необязательно)</label>
-        <textarea id="audience_feedback" name="audience_feedback" placeholder="Вставьте комментарии, реакции (эмодзи), цитаты — для анализа темы обсуждения и тональности.">{{ last_analysis.audience_text if last_analysis and last_analysis.audience_text else '' }}</textarea>
-      </div>
+    <p class="muted" style="margin-top:1rem;margin-bottom:0.5rem;">
+      Анализ аудитории подтягивается автоматически по ссылкам постов: для Telegram — просмотры и эмодзи-реакции; для сайтов — комментарии из HTML, если они есть на странице.
+    </p>
+    <form method="post" action="{{ url_for('blogger_analyze_posts') }}" style="margin-top:0;">
       <button class="btn btn-primary" type="submit">Проанализировать посты и аудиторию</button>
     </form>
 
@@ -65,9 +64,17 @@
         <h4 style="margin:0 0 0.5rem;">Последний анализ постов</h4>
         <p class="muted" style="white-space:pre-wrap;margin:0 0 0.75rem;">{{ last_analysis.summary }}</p>
         <div class="muted">Флаги: {{ last_analysis.flags if last_analysis.flags else "нет" }}</div>
+        <h4 style="margin:1rem 0 0.5rem;">Аудитория: тема и тональность</h4>
         {% if last_analysis.audience_insights %}
-          <h4 style="margin:1rem 0 0.5rem;">Аудитория: тема и тональность</h4>
-          <p class="muted" style="white-space:pre-wrap;margin:0;">{{ last_analysis.audience_insights }}</p>
+          <p class="muted" style="white-space:pre-wrap;margin:0 0 0.75rem;">{{ last_analysis.audience_insights }}</p>
+        {% else %}
+          <p class="muted" style="margin:0 0 0.75rem;">Пока нет — нажмите «Проанализировать посты и аудиторию».</p>
+        {% endif %}
+        {% if last_analysis.audience_text %}
+          <details style="margin-top:0.5rem;">
+            <summary class="muted" style="cursor:pointer;">Собранные данные по вовлечённости (сырой вывод)</summary>
+            <pre class="muted" style="white-space:pre-wrap;margin:0.5rem 0 0;font-size:0.85rem;">{{ last_analysis.audience_text }}</pre>
+          </details>
         {% endif %}
       </div>
     {% endif %}
