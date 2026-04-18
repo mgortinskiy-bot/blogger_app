@@ -52,15 +52,23 @@
       <button class="btn btn-ghost" type="submit">Сохранить посты</button>
     </form>
 
-    <form method="post" action="{{ url_for('blogger_analyze_posts') }}" style="margin-top:1rem;">
-      <button class="btn btn-primary" type="submit">Проанализировать посты</button>
+    <form method="post" action="{{ url_for('blogger_analyze_posts') }}" class="form" style="margin-top:1rem;max-width:none;">
+      <div>
+        <label for="audience_feedback">Комментарии и реакции аудитории (необязательно)</label>
+        <textarea id="audience_feedback" name="audience_feedback" placeholder="Вставьте комментарии, реакции (эмодзи), цитаты — для анализа темы обсуждения и тональности.">{{ last_analysis.audience_text if last_analysis and last_analysis.audience_text else '' }}</textarea>
+      </div>
+      <button class="btn btn-primary" type="submit">Проанализировать посты и аудиторию</button>
     </form>
 
     {% if last_analysis %}
       <div class="card" style="margin-top:1rem;background:rgba(0,0,0,0.18);">
-        <h4 style="margin:0 0 0.5rem;">Последний анализ</h4>
+        <h4 style="margin:0 0 0.5rem;">Последний анализ постов</h4>
         <p class="muted" style="white-space:pre-wrap;margin:0 0 0.75rem;">{{ last_analysis.summary }}</p>
         <div class="muted">Флаги: {{ last_analysis.flags if last_analysis.flags else "нет" }}</div>
+        {% if last_analysis.audience_insights %}
+          <h4 style="margin:1rem 0 0.5rem;">Аудитория: тема и тональность</h4>
+          <p class="muted" style="white-space:pre-wrap;margin:0;">{{ last_analysis.audience_insights }}</p>
+        {% endif %}
       </div>
     {% endif %}
   </div>

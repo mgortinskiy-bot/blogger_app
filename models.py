@@ -114,6 +114,8 @@ class BloggerPostAnalysis(Base):
     blogger_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     summary: Mapped[Text] = mapped_column(Text)
     flags: Mapped[str] = mapped_column(String(800))  # comma-separated
+    audience_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    audience_insights: Mapped[str | None] = mapped_column(Text, nullable=True)
     checked_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 

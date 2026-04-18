@@ -141,6 +141,15 @@ def ensure_schema():
         if not has_column("orders", c):
             add_column("orders", ddl)
 
+    # blogger_post_analyses
+    analysis_cols = {
+        "audience_text": "audience_text TEXT",
+        "audience_insights": "audience_insights TEXT",
+    }
+    for c, ddl in analysis_cols.items():
+        if not has_column("blogger_post_analyses", c):
+            add_column("blogger_post_analyses", ddl)
+
     # new tables (safe via create_all)
     Base.metadata.create_all(engine)
 
@@ -749,6 +758,147 @@ def inject_user():
     return {"current_user": current_user()}
 
 
+def llm_pollinations_text(prompt: str, *, max_prompt_chars: int = 2800) -> str | None:
+    """Бесплатная генерация текста через Pollinations (без API-ключа): GET text.pollinations.ai/{prompt}."""
+    import requests
+
+    p = " ".join((prompt or "").split())
+    if not p:
+        return None
+    if len(p) > max_prompt_chars:
+        p = p[: max_prompt_chars - 1].rstrip() + "…"
+    try:
+        url = "https://text.pollinations.ai/" + quote(p, safe="")
+        r = requests.get(url, timeout=55, headers={"Accept": "text/plain, text/*;q=0.9, */*;q=0.8"})
+    except Exception:
+        return None
+    if r.status_code >= 400:
+        return None
+    out = (r.text or "").strip()
+    return out or None
+
+
+def llm_chat_openai(system: str, user_msg: str) -> str | None:
+    api_key = (os.environ.get("OPENAI_API_KEY") or "").strip()
+    if not api_key:
+        return None
+    try:
+        import requests
+
+        model = (os.environ.get("OPENAI_MODEL") or "gpt-4o-mini").strip()
+        payload = {
+            "model": model,
+            "messages": [
+                {"role": "system", "content": system},
+                {"role": "user", "content": user_msg},
+            ],
+            "temperature": 0.4,
+        }
+        r = requests.post(
+            "https://api.openai.com/v1/chat/completions",
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json=payload,
+            timeout=25,
+        )
+        if r.status_code >= 400:
+            return None
+        data = r.json()
+        msg = (((data.get("choices") or [{}])[0]).get("message") or {}).get("content") or ""
+        msg = msg.strip()
+        return msg or None
+    except Exception:
+        return None
+
+
+def llm_assistant_reply(system: str, user_msg: str, *, user_role: str | None) -> str | None:
+    """Сначала OpenAI (если есть ключ), иначе бесплатный Pollinations."""
+    u = llm_chat_openai(system, f"Роль пользователя: {user_role or 'unknown'}\n\nВопрос:\n{user_msg}")
+    if u:
+        return u
+    combined = (
+        f"{system}\n\n"
+        f"Роль пользователя: {user_role or 'не указана'}.\n"
+        f"Вопрос пользователя:\n{user_msg}\n\n"
+        f"Ответь по-русски кратко (до 12 предложений), без воды."
+    )
+    return llm_pollinations_text(combined)
+
+
+def _heuristic_audience_analysis(text_in: str) -> str:
+    """Заглушка без LLM: грубая оценка тональности и темы по ключевым словам."""
+    t = (text_in or "").lower()
+    pos = (
+        "спасибо",
+        "класс",
+        "супер",
+        "круто",
+        "огонь",
+        "отлично",
+        "рад",
+        "люблю",
+        "👍",
+        "❤",
+        "🔥",
+        "хорошо",
+        "соглас",
+        "умница",
+        "топ",
+    )
+    neg = (
+        "ужас",
+        "плохо",
+        "ненавижу",
+        "скам",
+        "развод",
+        "минус",
+        "👎",
+        "возмут",
+        "отврат",
+        "гадост",
+        "достал",
+        "хватит",
+        "неправда",
+    )
+    pc = sum(1 for w in pos if w in t)
+    nc = sum(1 for w in neg if w in t)
+    if pc > nc and pc >= 1:
+        tone = "позитивное"
+    elif nc > pc and nc >= 1:
+        tone = "негативное"
+    elif pc == 0 and nc == 0:
+        tone = "нейтральное или неоднозначное"
+    else:
+        tone = "смешанное"
+    snippet = " ".join((text_in or "").split())[:320]
+    if len((text_in or "")) > 320:
+        snippet += "…"
+    return (
+        f"Основная тема реакций (по ключевым словам, грубо): обсуждение вокруг: «{snippet}».\n"
+        f"Тональность (эвристика): {tone}.\n"
+        f"Для точного разбора добавьте больше комментариев или используйте анализ с подключением к сети."
+    )
+
+
+def analyze_audience_feedback(comments: str) -> str:
+    """Тема реакций + позитив/негатив; сначала LLM (Pollinations), иначе эвристика."""
+    raw = " ".join((comments or "").split())
+    if not raw:
+        return ""
+    prompt = (
+        "Ты аналитик соцсетей. Проанализируй комментарии и реакции аудитории к посту блогера.\n"
+        "Ответ структурируй по-русски:\n"
+        "1) Основная тема обсуждения (1–3 предложения).\n"
+        "2) Тональность: одно слово из списка — позитивно / негативно / смешанно / нейтрально — и краткое объяснение.\n"
+        "3) Рекомендация блогеру (2–4 предложения).\n\n"
+        "Текст комментариев и реакций:\n"
+        f"{raw[:4000]}"
+    )
+    llm = llm_pollinations_text(prompt, max_prompt_chars=3000)
+    if llm:
+        return llm
+    return _heuristic_audience_analysis(raw)
+
+
 def _assistant_knowledge_base() -> list[tuple[list[str], str]]:
     """Простая база знаний для ответа без внешних AI API."""
     return [
@@ -787,43 +937,17 @@ def assistant_answer(question: str, *, user_role: str | None) -> str:
     if not q:
         return "Сформулируйте вопрос — и я подскажу."
 
-    # 1) Optional: OpenAI (если задан ключ)
-    api_key = (os.environ.get("OPENAI_API_KEY") or "").strip()
-    if api_key:
-        try:
-            import requests
+    system = (
+        "Ты помощник веб-сервиса «Проект Хайп».\n"
+        "Задача: помогать пользователю разобраться в функциях сайта и в концепции "
+        "«блогер как бизнес»: сервис и аналитика в одном месте. Отвечай по-русски, кратко и по делу.\n"
+        "Если спрашивают про будущие функции (школа блогеров, продвинутая аналитика) — говори, что это в планах."
+    )
+    llm = llm_assistant_reply(system, q, user_role=user_role)
+    if llm:
+        return llm
 
-            model = (os.environ.get("OPENAI_MODEL") or "gpt-4o-mini").strip()
-            system = (
-                "Ты помощник веб-сервиса «Проект Хайп».\n"
-                "Задача: помогать пользователю разобраться в функциях сайта и в концепции "
-                "«блогер как бизнес»: сервис и аналитика в одном месте. Отвечай по-русски, кратко и по делу.\n"
-                "Если спрашивают про будущие функции (школа блогеров, продвинутая аналитика) — говори, что это в планах."
-            )
-            payload = {
-                "model": model,
-                "messages": [
-                    {"role": "system", "content": system},
-                    {"role": "user", "content": f"Роль пользователя: {user_role or 'unknown'}\nВопрос: {q}"},
-                ],
-                "temperature": 0.4,
-            }
-            r = requests.post(
-                "https://api.openai.com/v1/chat/completions",
-                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-                json=payload,
-                timeout=20,
-            )
-            if r.status_code < 400:
-                data = r.json()
-                msg = (((data.get("choices") or [{}])[0]).get("message") or {}).get("content") or ""
-                msg = msg.strip()
-                if msg:
-                    return msg
-        except Exception:
-            pass
-
-    # 2) Fallback: встроенная база знаний
+    # Fallback: встроенная база знаний
     low = q.lower()
     for keys, answer in _assistant_knowledge_base():
         if any(k in low for k in keys):
@@ -1258,12 +1382,24 @@ def blogger_analyze_posts():
     joined = "\n\n".join([p.text for p in posts])
     summary = summarize_text(joined)
     flags = unethical_flags(joined)
-    db.add(BloggerPostAnalysis(blogger_id=user.id, summary=summary, flags=",".join(flags)))
+    audience_raw = (request.form.get("audience_feedback") or "").strip()
+    audience_insights = analyze_audience_feedback(audience_raw) if audience_raw else None
+    db.add(
+        BloggerPostAnalysis(
+            blogger_id=user.id,
+            summary=summary,
+            flags=",".join(flags),
+            audience_text=audience_raw or None,
+            audience_insights=audience_insights,
+        )
+    )
     db.commit()
     if flags:
         flash("Найдены потенциально неэтичные темы/слова: " + ", ".join(flags), "warning")
     else:
         flash("Проверка пройдена: явных неэтичных слов/тем не найдено.", "success")
+    if audience_raw:
+        flash("Анализ комментариев и реакций добавлен.", "info")
     return redirect(url_for("blogger_profile"))
 
 
