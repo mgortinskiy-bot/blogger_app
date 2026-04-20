@@ -1,17 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="820" height="420" viewBox="0 0 820 420" fill="none">
   <defs>
     <linearGradient id="g2" x1="90" y1="40" x2="760" y2="380" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#E879F9" stop-opacity="0.9"/>
-      <stop offset="1" stop-color="#C084FC" stop-opacity="0.9"/>
+      <stop stop-color="#34d399" stop-opacity="0.9"/>
+      <stop offset="0.55" stop-color="#c084fc" stop-opacity="0.75"/>
+      <stop offset="1" stop-color="#f472b6" stop-opacity="0.85"/>
     </linearGradient>
   </defs>
-  <rect width="820" height="420" rx="28" fill="#0C0618"/>
-  <rect x="86" y="86" width="648" height="248" rx="26" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.14)"/>
+  <rect width="820" height="420" rx="28" fill="#ffffff" stroke="rgba(15,23,42,0.08)" stroke-width="1"/>
+  <rect x="86" y="86" width="648" height="248" rx="26" fill="rgba(248,250,252,0.95)" stroke="rgba(192,38,211,0.15)"/>
   <path d="M170 270c52-70 104-100 162-94 54 6 92 44 140 70 54 30 108 30 176-40" stroke="url(#g2)" stroke-width="18" stroke-linecap="round"/>
-  <circle cx="206" cy="180" r="34" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.14)"/>
-  <path d="M192 180h28" stroke="rgba(255,255,255,0.65)" stroke-width="8" stroke-linecap="round"/>
-  <path d="M206 166v28" stroke="rgba(255,255,255,0.65)" stroke-width="8" stroke-linecap="round"/>
-  <text x="122" y="60" fill="rgba(255,255,255,0.86)" font-family="Inter,Segoe UI,sans-serif" font-size="22" font-weight="800">Аналитика и рекомендации</text>
-  <text x="122" y="384" fill="rgba(255,255,255,0.55)" font-family="Inter,Segoe UI,sans-serif" font-size="16" font-weight="500">Иллюстрация для главной страницы</text>
+  <circle cx="206" cy="180" r="34" fill="rgba(233,213,255,0.45)" stroke="rgba(22,163,74,0.25)"/>
+  <path d="M192 180h28" stroke="#0f172a" stroke-width="8" stroke-linecap="round" opacity="0.35"/>
+  <path d="M206 166v28" stroke="#0f172a" stroke-width="8" stroke-linecap="round" opacity="0.35"/>
+  <text x="122" y="60" fill="#0f172a" font-family="Inter,Segoe UI,sans-serif" font-size="22" font-weight="800">Аналитика и рекомендации</text>
+  <text x="122" y="384" fill="#64748b" font-family="Inter,Segoe UI,sans-serif" font-size="16" font-weight="500">Иллюстрация для главной страницы</text>
 </svg>
-
