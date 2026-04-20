@@ -1,11 +1,14 @@
 :root {
-  --bg-deep: #0c0618;
+  --bg-deep: #0a1210;
   --bg-card: rgba(255, 255, 255, 0.06);
   --border: rgba(255, 255, 255, 0.12);
   --text: #f4f0ff;
-  --muted: #a89bc8;
-  --accent: #c084fc;
-  --accent-2: #e879f9;
+  --muted: #a8b8c4;
+  --accent: #d946ef;
+  --accent-2: #f472b6;
+  --glow-green: rgba(33, 160, 56, 0.42);
+  --glow-coral: rgba(244, 114, 182, 0.38);
+  --glow-violet: rgba(167, 139, 250, 0.32);
   --success: #4ade80;
   --danger: #fb7185;
   --warning: #fbbf24;
@@ -29,9 +32,11 @@ body {
   min-height: 100vh;
   font-family: var(--font);
   color: var(--text);
-  background: radial-gradient(1200px 600px at 10% -10%, rgba(192, 132, 252, 0.35), transparent),
-    radial-gradient(900px 500px at 100% 0%, rgba(232, 121, 249, 0.25), transparent),
-    linear-gradient(165deg, #0c0618 0%, #1a0b2e 40%, #12081f 100%);
+  /* Слева сверху — зелёный акцент; справа снизу — тёплый розово‑фиолетовый градиент */
+  background:
+    radial-gradient(ellipse 95% 80% at 0% 0%, var(--glow-green) 0%, transparent 52%),
+    radial-gradient(ellipse 100% 85% at 100% 100%, var(--glow-coral) 0%, var(--glow-violet) 38%, transparent 58%),
+    linear-gradient(155deg, #0a1210 0%, #0e0c18 42%, #120a14 100%);
   background-attachment: fixed;
 }
 
@@ -60,7 +65,7 @@ a:hover {
   top: 0;
   z-index: 50;
   backdrop-filter: blur(14px);
-  background: linear-gradient(180deg, rgba(12, 6, 24, 0.92), rgba(12, 6, 24, 0.65));
+  background: linear-gradient(180deg, rgba(10, 18, 16, 0.94), rgba(12, 10, 20, 0.68));
 }
 
 .brand {
@@ -73,13 +78,13 @@ a:hover {
   width: 44px;
   height: 44px;
   border-radius: 12px;
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  background: linear-gradient(135deg, #21a038, var(--accent-2));
   display: grid;
   place-items: center;
   font-weight: 800;
   font-size: 1.1rem;
-  color: #1a0524;
-  box-shadow: 0 8px 32px rgba(192, 132, 252, 0.45);
+  color: #0a1210;
+  box-shadow: 0 8px 32px rgba(244, 114, 182, 0.35);
 }
 
 .brand-text {
@@ -153,9 +158,9 @@ a:hover {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  background: rgba(192, 132, 252, 0.15);
-  color: #e9d5ff;
-  border: 1px solid rgba(192, 132, 252, 0.35);
+  background: rgba(33, 160, 56, 0.14);
+  color: #d1fae5;
+  border: 1px solid rgba(33, 160, 56, 0.35);
   margin-bottom: 1rem;
 }
 
@@ -264,8 +269,8 @@ textarea {
 input:focus,
 textarea:focus {
   outline: none;
-  border-color: rgba(192, 132, 252, 0.6);
-  box-shadow: 0 0 0 3px rgba(192, 132, 252, 0.2);
+  border-color: rgba(244, 114, 182, 0.55);
+  box-shadow: 0 0 0 3px rgba(217, 70, 239, 0.18);
 }
 
 .flash-wrap {
@@ -399,7 +404,7 @@ tr:last-child td {
 .bar-chart .bar {
   flex: 1;
   min-width: 8px;
-  background: linear-gradient(180deg, var(--accent), var(--accent-2));
+  background: linear-gradient(180deg, #21a038, var(--accent));
   border-radius: 6px 6px 2px 2px;
   opacity: 0.85;
   position: relative;
