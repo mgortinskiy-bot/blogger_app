@@ -1,42 +1,83 @@
 {% extends "base.html" %}
-{% block title %}Мои заказы — рекламодатель{% endblock %}
+{% block title %}Мои заказы — Проект Хайп{% endblock %}
 {% block content %}
 <section class="hero" style="padding-top:2rem;text-align:left;">
   <h1 style="text-align:left;">Мои заказы</h1>
   <p class="hero-lead" style="margin-left:0;text-align:left;">
+    Здесь разделены заказы, где вы <strong>заказчик</strong>, и те, где вы <strong>исполнитель</strong>.
     <a class="btn btn-primary btn-sm" href="{{ url_for('advertiser_new_order') }}">+ Новый заказ</a>
   </p>
 </section>
 
-<div class="table-wrap">
-  <table>
-    <thead>
-      <tr>
-        <th>Название</th>
-        <th>Статус</th>
-        <th>Баллы</th>
-        <th>Создан</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for o in orders %}
-      <tr>
-        <td>
-          <strong>{{ o.title }}</strong>
-          <div class="muted" style="font-size:0.85rem;margin-top:0.25rem;">{{ o.description[:120] }}{% if o.description|length > 120 %}…{% endif %}</div>
-        </td>
-        <td>
-          {% if o.status == 'open' %}<span class="badge badge-open">Открыт</span>{% endif %}
-          {% if o.status == 'assigned' %}<span class="badge badge-assigned">В работе</span>{% endif %}
-          {% if o.status == 'completed' %}<span class="badge badge-done">Выполнен</span>{% endif %}
-        </td>
-        <td>{{ o.points_reward }}</td>
-        <td>{{ o.created_at.strftime('%d.%m.%Y') }}</td>
-      </tr>
-      {% else %}
-      <tr><td colspan="4" class="muted">Заказов пока нет</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+<div class="card" style="margin-bottom:1.5rem;">
+  <h2 style="margin-top:0;font-size:1.15rem;">Я заказчик</h2>
+  <p class="muted" style="margin-top:0;">Заказы, которые вы опубликовали как рекламодатель.</p>
+  <div class="table-wrap" style="margin-top:1rem;">
+    <table>
+      <thead>
+        <tr>
+          <th>Название</th>
+          <th>Статус</th>
+          <th>Баллы</th>
+          <th>Создан</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for o in orders_as_advertiser %}
+        <tr>
+          <td>
+            <strong>{{ o.title }}</strong>
+            <div class="muted" style="font-size:0.85rem;margin-top:0.25rem;">{{ o.description[:120] }}{% if o.description|length > 120 %}…{% endif %}</div>
+          </td>
+          <td>
+            {% if o.status == 'open' %}<span class="badge badge-open">Открыт</span>{% endif %}
+            {% if o.status == 'assigned' %}<span class="badge badge-assigned">В работе</span>{% endif %}
+            {% if o.status == 'completed' %}<span class="badge badge-done">Выполнен</span>{% endif %}
+          </td>
+          <td>{{ o.points_reward }}</td>
+          <td>{{ o.created_at.strftime('%d.%m.%Y') }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" class="muted">Нет заказов в роли заказчика</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0;font-size:1.15rem;">Я исполнитель</h2>
+  <p class="muted" style="margin-top:0;">Заказы, где вы назначены исполнителем (в работе или уже выполнены).</p>
+  <div class="table-wrap" style="margin-top:1rem;">
+    <table>
+      <thead>
+        <tr>
+          <th>Название</th>
+          <th>Статус</th>
+          <th>Баллы</th>
+          <th>Создан</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for o in orders_as_blogger %}
+        <tr>
+          <td>
+            <strong>{{ o.title }}</strong>
+            <div class="muted" style="font-size:0.85rem;margin-top:0.25rem;">{{ o.description[:120] }}{% if o.description|length > 120 %}…{% endif %}</div>
+          </td>
+          <td>
+            {% if o.status == 'open' %}<span class="badge badge-open">Открыт</span>{% endif %}
+            {% if o.status == 'assigned' %}<span class="badge badge-assigned">В работе</span>{% endif %}
+            {% if o.status == 'completed' %}<span class="badge badge-done">Выполнен</span>{% endif %}
+          </td>
+          <td>{{ o.points_reward }}</td>
+          <td>{{ o.created_at.strftime('%d.%m.%Y') }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" class="muted">Нет заказов в роли исполнителя</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
 {% endblock %}

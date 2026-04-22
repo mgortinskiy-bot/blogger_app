@@ -1396,8 +1396,9 @@ def admin_delete_user(user_id: int):
 @require_role(UserRole.BLOGGER)
 def blogger_orders():
     db = get_db()
+    user = current_user()
     q = (request.args.get("q") or "").strip()
-    query = db.query(Order).filter(Order.status == OrderStatus.OPEN)
+    query = db.query(Order).filter(Order.status == OrderStatus.OPEN, Order.advertiser_id != user.id)
     if q:
         like = f"%{q.lower()}%"
         query = query.filter(
@@ -1407,7 +1408,6 @@ def blogger_orders():
             )
         )
     orders_open = query.order_by(Order.created_at.desc()).all()
-    user = current_user()
     my_active = (
         db.query(Order)
         .filter(Order.blogger_id == user.id, Order.status == OrderStatus.ASSIGNED)
@@ -1562,6 +1562,9 @@ def blogger_take_order(order_id: int):
     if not order or order.status != OrderStatus.OPEN:
         flash("Заказ недоступен.", "danger")
         return redirect(url_for("blogger_orders"))
+    if order.advertiser_id == user.id:
+        flash("Нельзя взять в работу собственный заказ.", "danger")
+        return redirect(url_for("blogger_orders"))
     order.status = OrderStatus.ASSIGNED
     order.blogger_id = user.id
     db.commit()
@@ -1614,13 +1617,23 @@ def blogger_stats():
 def advertiser_orders():
     db = get_db()
     user = current_user()
-    orders = (
+    orders_as_advertiser = (
         db.query(Order)
         .filter(Order.advertiser_id == user.id)
         .order_by(Order.created_at.desc())
         .all()
     )
-    return render_template("advertiser_orders.html", orders=orders)
+    orders_as_blogger = (
+        db.query(Order)
+        .filter(Order.blogger_id == user.id)
+        .order_by(Order.created_at.desc())
+        .all()
+    )
+    return render_template(
+        "advertiser_orders.html",
+        orders_as_advertiser=orders_as_advertiser,
+        orders_as_blogger=orders_as_blogger,
+    )
 
 
 def recommend_bloggers(db, advertiser_id: int, limit: int = 8):

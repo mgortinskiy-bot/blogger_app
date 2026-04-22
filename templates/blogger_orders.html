@@ -42,12 +42,14 @@
     <div class="order-meta">
       <span class="badge badge-open">Открыт</span>
       <span class="muted">Награда: {{ o.points_reward }} баллов</span>
-      {% if not my_active %}
+      {% if my_active %}
+      <span class="muted">Сначала завершите текущий заказ</span>
+      {% elif o.advertiser_id == current_user.id %}
+      <span class="muted">Свой заказ — в разделе «Мои заказы»</span>
+      {% else %}
       <form method="post" action="{{ url_for('blogger_take_order', order_id=o.id) }}" class="inline-form">
         <button class="btn btn-primary btn-sm" type="submit">Взять заказ</button>
       </form>
-      {% else %}
-      <span class="muted">Сначала завершите текущий заказ</span>
       {% endif %}
     </div>
   </div>
