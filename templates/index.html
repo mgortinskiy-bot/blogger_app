@@ -1,7 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Проект Хайп — главная{% endblock %}
+{% block body_class %}page-home{% endblock %}
 {% block content %}
-<section class="hero">
+<section class="hero hero--home">
   <div class="banner">
     <div class="banner-track">
       <div class="banner-slide">
@@ -14,9 +15,9 @@
       <div class="banner-slide">
         <div class="banner-title">Как это работает?</div>
         <div class="banner-steps">
-          <div class="banner-step"><b>1.</b> Ты регистрируешься <span class="muted">(кнопка «Оставить заявку»)</span></div>
-          <div class="banner-step"><b>2.</b> Получаешь карту со стартовым бюджетом на продвижение блога</div>
-          <div class="banner-step"><b>3.</b> Тратишь его на платформе, растишь аудиторию и развиваешься</div>
+          <div class="banner-step"><b>1.</b> Регистрация по email</div>
+          <div class="banner-step"><b>2.</b> Стартовые баллы на счёте для заказов и сервисов</div>
+          <div class="banner-step"><b>3.</b> Заказы, аналитика и рост аудитории в одном месте</div>
         </div>
         <div class="banner-actions">
           <a class="btn btn-primary" href="{{ url_for('register_blogger') }}">Оставить заявку</a>
@@ -27,46 +28,37 @@
       <span class="dot"></span><span class="dot"></span>
     </div>
   </div>
-  <div class="pill">Кодовое название · Проект Хайп</div>
+  <p class="eyebrow">Проект Хайп</p>
   <h1>Платформа, где блогеры и бренды находят друг друга</h1>
   <p class="hero-lead">
-    Рекламодатели выставляют заказы на рекламу. Блогеры выбирают подходящие кампании,
-    выполняют их и получают баллы на счёт. Плюс рекомендации, проверка контента и генерация черновиков.
+    Рекламодатели публикуют заказы на рекламу. Блогеры выбирают кампании,
+    выполняют их и получают баллы. Рекомендации, проверка контента и генерация черновиков — внутри кабинета.
   </p>
-  <div style="display:flex;flex-wrap:wrap;gap:0.75rem;justify-content:center;">
+  <div class="hero-actions">
     <a class="btn btn-primary" href="{{ url_for('register_blogger') }}">Оставить заявку</a>
     <a class="btn btn-ghost" href="{{ url_for('login') }}">Войти</a>
   </div>
 </section>
 
-<div class="grid-2" style="align-items:stretch;">
-  <div class="card" style="padding:0;overflow:hidden;">
-    <img src="{{ url_for('static', filename='creative1.svg') }}" alt="Креатив блогерской профессии" style="width:100%;display:block;">
+<section class="home-features" aria-labelledby="home-features-title">
+  <h2 id="home-features-title" class="visually-hidden">Возможности</h2>
+  <div class="grid-2 grid-2--features">
+    <article class="card card--feature">
+      <div class="feature-head">
+        <span class="feature-mark" aria-hidden="true"></span>
+        <h3>Блогерам</h3>
+      </div>
+      <p class="muted">Поиск заказов, взятие в работу, начисление баллов за выполнение и статистика по кампаниям.</p>
+      <a class="btn btn-primary btn-sm" href="{{ url_for('register_blogger') }}">Регистрация</a>
+    </article>
+    <article class="card card--feature">
+      <div class="feature-head">
+        <span class="feature-mark feature-mark--alt" aria-hidden="true"></span>
+        <h3>Заказы и продвижение</h3>
+      </div>
+      <p class="muted">Публикация заказов, отбор исполнителей и статусы: открыт, в работе, выполнен.</p>
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('login') }}">Войти в кабинет</a>
+    </article>
   </div>
-  <div class="card" style="padding:0;overflow:hidden;">
-    <img src="{{ url_for('static', filename='creative2.svg') }}" alt="Аналитика и рекомендации" style="width:100%;display:block;">
-  </div>
-</div>
-
-<div class="grid-2">
-  <article class="card">
-    <h2>Блогерам</h2>
-    <p class="muted">Регистрация по email, поиск заказов, взятие в работу и начисление баллов за выполнение.
-      Статистика по завершённым кампаниям — в один клик.</p>
-    <a class="btn btn-primary btn-sm" href="{{ url_for('register_blogger') }}">Регистрация</a>
-  </article>
-  <article class="card">
-    <h2>Заказы и продвижение</h2>
-    <p class="muted">Оформляйте и публикуйте заказы на рекламу, находите исполнителей и отслеживайте статус:
-      открыт, в работе, выполнен.</p>
-    <a class="btn btn-ghost btn-sm" href="{{ url_for('login') }}">Посмотреть после входа</a>
-  </article>
-</div>
-
-<div class="card" style="margin-top:1.5rem;text-align:center;">
-  <h3 style="margin-bottom:0.5rem;">Администратору</h3>
-  <p class="muted" style="margin-bottom:1rem;">Вход: логин <strong>admin</strong>, пароль из инструкции к развёртыванию.
-    Управление пользователями и дашборды активности.</p>
-  <a class="btn btn-ghost btn-sm" href="{{ url_for('login') }}">Войти</a>
-</div>
+</section>
 {% endblock %}
