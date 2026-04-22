@@ -8,27 +8,27 @@
 <div class="card" style="max-width:480px;margin:0 auto;">
   <form class="form" method="post">
     <div>
-      <label for="full_name">ФИО</label>
+      <label for="full_name">ФИО *</label>
       <input id="full_name" name="full_name" type="text" required maxlength="200" placeholder="Иванов Иван Иванович" autocomplete="name">
     </div>
     <div>
       <label for="phone">Телефон</label>
-      <input id="phone" name="phone" type="text" required maxlength="40" placeholder="+7..." autocomplete="tel">
+      <input id="phone" name="phone" type="text" maxlength="40" placeholder="+7..." autocomplete="tel">
     </div>
     <div>
       <label for="telegram">Telegram (личный аккаунт)</label>
       <input id="telegram" name="telegram" type="text" maxlength="120" placeholder="@username или ссылка" autocomplete="off">
     </div>
     <div>
-      <label for="email">Email</label>
+      <label for="email">Email *</label>
       <input id="email" name="email" type="email" required autocomplete="email">
     </div>
     <div>
-      <label for="password">Пароль</label>
+      <label for="password">Пароль *</label>
       <input id="password" name="password" type="password" required minlength="6" autocomplete="new-password">
     </div>
     <div>
-      <label for="password2">Пароль ещё раз</label>
+      <label for="password2">Пароль ещё раз *</label>
       <input id="password2" name="password2" type="password" required minlength="6" autocomplete="new-password">
     </div>
     <button class="btn btn-primary" type="submit">Создать аккаунт</button>

@@ -1182,6 +1182,9 @@ def register_blogger():
         if not email or "@" not in email:
             flash("Укажите корректный email.", "danger")
             return render_template("register_blogger.html")
+        if not full_name:
+            flash("Укажите ФИО.", "danger")
+            return render_template("register_blogger.html")
         if len(password) < 6:
             flash("Пароль не короче 6 символов.", "danger")
             return render_template("register_blogger.html")
