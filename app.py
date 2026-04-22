@@ -6,7 +6,6 @@ import os
 import re
 import secrets
 import xml.etree.ElementTree as ET
-from collections import defaultdict
 from urllib.parse import quote, urljoin, urlparse
 from datetime import datetime, timedelta
 from functools import wraps
@@ -44,6 +43,9 @@ engine = make_engine(
     sqlite_path=str(DB_PATH) if not _database_url else None,
 )
 SessionLocal = make_session_factory(engine)
+
+# Стартовый баланс баллов; при создании заказа рекламодатель тратит points_reward с этого баланса.
+STARTING_POINTS = 1000
 
 
 def get_db():
@@ -83,7 +85,7 @@ def init_db():
                 password_hash=hash_password("admin1612"),
                 role=UserRole.ADMIN,
                 blocked=False,
-                points=0,
+                points=STARTING_POINTS,
             )
             db.add(admin)
             db.commit()
@@ -156,6 +158,29 @@ def ensure_schema():
 
     # new tables (safe via create_all)
     Base.metadata.create_all(engine)
+
+    _grant_existing_users_starting_bonus_once()
+
+
+def _grant_existing_users_starting_bonus_once() -> None:
+    """Один раз: +STARTING_POINTS всем пользователям (идемпотентно, для уже существующих БД)."""
+    meta_key = "users_starting_points_bonus_v1"
+    with engine.begin() as conn:
+        conn.execute(
+            text(
+                "CREATE TABLE IF NOT EXISTS app_meta ("
+                "key VARCHAR(80) PRIMARY KEY, value VARCHAR(255) NOT NULL)"
+            )
+        )
+        done = conn.execute(
+            text("SELECT 1 FROM app_meta WHERE key = :k LIMIT 1"), {"k": meta_key}
+        ).first()
+        if done:
+            return
+        conn.execute(text("UPDATE users SET points = COALESCE(points, 0) + :p"), {"p": STARTING_POINTS})
+        conn.execute(
+            text("INSERT INTO app_meta (key, value) VALUES (:k, '1')"), {"k": meta_key}
+        )
 
 
 init_db()
@@ -1203,7 +1228,7 @@ def register_blogger():
             password_hash=hash_password(password),
             role=UserRole.BLOGGER,
             blocked=False,
-            points=0,
+            points=STARTING_POINTS,
             full_name=full_name,
             phone=phone,
             telegram=telegram,
@@ -1301,16 +1326,9 @@ def admin_dashboard():
         db.query(User)
         .filter(User.created_at >= since, User.role != UserRole.ADMIN)
         .order_by(User.created_at.desc())
-        .limit(200)
+        .limit(40)
         .all()
     )
-    by_day: dict[str, int] = defaultdict(int)
-    for u in new_users:
-        key = u.created_at.strftime("%Y-%m-%d") if u.created_at else ""
-        by_day[key] += 1
-    chart_labels = sorted(by_day.keys())
-    chart_values = [by_day[k] for k in chart_labels]
-    chart_max = max(chart_values) if chart_values else 1
 
     recent_orders = db.query(Order).order_by(Order.created_at.desc()).limit(15).all()
 
@@ -1329,9 +1347,7 @@ def admin_dashboard():
         advertisers=advertisers,
         orders_total=orders_total,
         orders_done=orders_done,
-        chart_labels=chart_labels,
-        chart_values=chart_values,
-        chart_max=chart_max,
+        new_users=new_users,
         recent_orders=recent_orders,
         active_bloggers=active_bloggers,
     )
@@ -1749,14 +1765,6 @@ def advertiser_new_order():
             points = int(request.form.get("points_reward") or "0")
         except ValueError:
             points = 0
-        try:
-            budget_rub = int(request.form.get("budget_rub") or "0")
-        except ValueError:
-            budget_rub = 0
-        try:
-            payout_rub = int(request.form.get("payout_rub") or "0")
-        except ValueError:
-            payout_rub = 0
         if not title or not description:
             flash("Заполните название и описание.", "danger")
             return render_template("advertiser_new_order.html")
@@ -1765,13 +1773,18 @@ def advertiser_new_order():
             return render_template("advertiser_new_order.html")
         db = get_db()
         user = current_user()
+        balance = int(user.points or 0)
+        if balance < points:
+            flash(f"Недостаточно баллов: нужно {points}, на счёте {balance}.", "danger")
+            return render_template("advertiser_new_order.html")
+        user.points = balance - points
         o = Order(
             advertiser_id=user.id,
             title=title,
             description=description,
             points_reward=points,
-            budget_rub=budget_rub or None,
-            payout_rub=payout_rub or None,
+            budget_rub=None,
+            payout_rub=None,
             status=OrderStatus.OPEN,
         )
         db.add(o)

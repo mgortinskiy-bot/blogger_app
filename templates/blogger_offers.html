@@ -13,7 +13,7 @@
       <p class="muted" style="margin:0.5rem 0;">{{ order.description }}</p>
       <div class="order-meta">
         <span class="badge badge-open">{{ offer.status }}</span>
-        <span class="muted">Награда: {{ order.points_reward }} баллов{% if order.payout_rub %} · {{ order.payout_rub }} ₽{% endif %}</span>
+        <span class="muted">Награда: {{ order.points_reward }} баллов</span>
         {% if offer.status == 'pending' %}
           <form class="inline-form" method="post" action="{{ url_for('blogger_offer_action', offer_id=offer.id, action='accept') }}">
             <button class="btn btn-primary btn-sm" type="submit">Принять</button>

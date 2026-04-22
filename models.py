@@ -31,7 +31,7 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(128))
     role: Mapped[str] = mapped_column(String(20), index=True)
     blocked: Mapped[bool] = mapped_column(Boolean, default=False)
-    points: Mapped[int] = mapped_column(Integer, default=0)
+    points: Mapped[int] = mapped_column(Integer, default=1000)
     full_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
     phone: Mapped[str | None] = mapped_column(String(40), nullable=True)
     telegram: Mapped[str | None] = mapped_column(String(120), nullable=True)

@@ -3,7 +3,7 @@
 {% block content %}
 <section class="hero" style="padding-top:2rem;text-align:left;">
   <h1 style="text-align:left;">Новый заказ на рекламу</h1>
-  <p class="hero-lead" style="margin-left:0;text-align:left;">Опишите задачу и укажите награду в баллах для блогера.</p>
+  <p class="hero-lead" style="margin-left:0;text-align:left;">Опишите задачу и укажите награду в баллах для блогера. С вашего баланса спишется столько же баллов.</p>
 </section>
 
 <div class="card" style="max-width:560px;">
@@ -19,14 +19,6 @@
     <div>
       <label for="points_reward">Награда (баллы)</label>
       <input id="points_reward" name="points_reward" type="number" min="1" value="100" required>
-    </div>
-    <div>
-      <label for="budget_rub">Бюджет (₽, опционально)</label>
-      <input id="budget_rub" name="budget_rub" type="number" min="0" value="0">
-    </div>
-    <div>
-      <label for="payout_rub">Выплата блогеру (₽, опционально)</label>
-      <input id="payout_rub" name="payout_rub" type="number" min="0" value="0">
     </div>
     <button class="btn btn-primary" type="submit">Опубликовать</button>
   </form>

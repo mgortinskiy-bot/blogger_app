@@ -16,20 +16,14 @@
 
 <div class="grid-2">
   <div class="card">
-    <h3>Регистрации за 14 дней</h3>
-    <div class="bar-chart" style="margin-top:1.5rem;padding-bottom:1.5rem;">
-      {% for label in chart_labels %}
-        {% set v = chart_values[loop.index0] %}
-        {% set mx = chart_max if chart_max else 1 %}
-        {% set h = (v / mx * 100) %}
-        <div class="bar" style="height: {{ '%.1f'|format(h) }}%;" title="{{ v }} за {{ label }}">
-          <span>{{ label[5:] }}</span>
-        </div>
+    <h3>Новые регистрации (14 дней)</h3>
+    <ul class="muted" style="padding-left:1.1rem;margin:0.75rem 0 0;">
+      {% for u in new_users %}
+        <li style="margin-bottom:0.35rem;">{{ u.email }} — {{ u.created_at.strftime('%d.%m %H:%M') if u.created_at else '—' }}</li>
+      {% else %}
+        <li>Пока нет регистраций за период.</li>
       {% endfor %}
-    </div>
-    {% if not chart_labels %}
-      <p class="muted">Пока нет регистраций за период.</p>
-    {% endif %}
+    </ul>
   </div>
   <div class="card">
     <h3>Недавние входы блогеров</h3>
