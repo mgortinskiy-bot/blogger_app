@@ -26,27 +26,22 @@
       <nav class="nav">
         {% if current_user %}
           {% if current_user.role == 'admin' %}
-            <a href="{{ url_for('admin_dashboard') }}">Дашборд</a>
-            <a href="{{ url_for('admin_users') }}">Пользователи</a>
-          {% elif current_user.role == 'blogger' %}
-            <a href="{{ url_for('blogger_orders') }}">Заказы</a>
-            <a href="{{ url_for('blogger_offers') }}">Предложения</a>
-            <a href="{{ url_for('blogger_profile') }}">Профиль</a>
-            <a href="{{ url_for('blogger_stats') }}">Статистика</a>
-            <span class="muted" style="font-size:0.85rem;">{{ current_user.points or 0 }} баллов</span>
-          {% elif current_user.role == 'advertiser' %}
-            <a href="{{ url_for('advertiser_orders') }}">Мои заказы</a>
-            <a href="{{ url_for('advertiser_new_order') }}">Создать заказ</a>
-            <a href="{{ url_for('advertiser_bloggers') }}">Блогеры</a>
+            <a class="nav-link {% if request.endpoint == 'admin_dashboard' %}is-active{% endif %}" href="{{ url_for('admin_dashboard') }}">Дашборд</a>
+            <a class="nav-link {% if request.endpoint == 'admin_users' %}is-active{% endif %}" href="{{ url_for('admin_users') }}">Пользователи</a>
           {% endif %}
+          <a class="nav-link {% if request.endpoint == 'blogger_orders' %}is-active{% endif %}" href="{{ url_for('blogger_orders') }}">Заказы</a>
+          <a class="nav-link {% if request.endpoint == 'advertiser_orders' %}is-active{% endif %}" href="{{ url_for('advertiser_orders') }}">Мои заказы</a>
+          <a class="nav-link {% if request.endpoint == 'advertiser_new_order' %}is-active{% endif %}" href="{{ url_for('advertiser_new_order') }}">Создать заказ</a>
+          <a class="nav-link {% if request.endpoint == 'blogger_profile' %}is-active{% endif %}" href="{{ url_for('blogger_profile') }}">Профиль</a>
+          <a class="nav-link {% if request.endpoint == 'blogger_stats' %}is-active{% endif %}" href="{{ url_for('blogger_stats') }}">Статистика</a>
+          <span class="muted" style="font-size:0.85rem;">{{ current_user.points or 0 }} баллов</span>
           <a href="{{ url_for('assistant_chat') }}">AI помощник</a>
           <a href="{{ url_for('tools_generate') }}">Генератор</a>
           <a href="{{ url_for('logout') }}">Выход</a>
         {% else %}
-          <a href="{{ url_for('index') }}">Главная</a>
-          <a href="{{ url_for('login') }}">Вход</a>
-          <a href="{{ url_for('register_blogger') }}">Блогерам</a>
-          <a href="{{ url_for('register_advertiser') }}">Брендам</a>
+          <a class="nav-link {% if request.endpoint == 'index' %}is-active{% endif %}" href="{{ url_for('index') }}">Главная</a>
+          <a class="nav-link {% if request.endpoint == 'login' %}is-active{% endif %}" href="{{ url_for('login') }}">Вход</a>
+          <a class="nav-link {% if request.endpoint == 'register_blogger' %}is-active{% endif %}" href="{{ url_for('register_blogger') }}">Регистрация</a>
         {% endif %}
       </nav>
     </header>
@@ -69,5 +64,28 @@
       Проект Хайп — платформа для работы блогеров и брендов.
     </footer>
   </div>
+  <script>
+    // UX: анимация нажатия + состояние загрузки при запуске действий (submit)
+    (function () {
+      document.addEventListener("click", function (e) {
+        var btn = e.target && e.target.closest ? e.target.closest(".btn") : null;
+        if (!btn) return;
+        btn.classList.remove("is-pressed");
+        // force reflow
+        void btn.offsetWidth;
+        btn.classList.add("is-pressed");
+        window.setTimeout(function () { btn.classList.remove("is-pressed"); }, 220);
+      });
+
+      document.addEventListener("submit", function (e) {
+        var form = e.target;
+        if (!form || !form.querySelector) return;
+        var btn = form.querySelector("button[type='submit'].btn");
+        if (!btn) return;
+        btn.classList.add("is-loading");
+        btn.disabled = true;
+      }, true);
+    })();
+  </script>
 </body>
 </html>

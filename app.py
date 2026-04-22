@@ -127,6 +127,9 @@ def ensure_schema():
         "blog_url": "blog_url VARCHAR(600)",
         "bio": "bio VARCHAR(800)",
         "niche_tags": "niche_tags VARCHAR(500)",
+        "full_name": "full_name VARCHAR(200)",
+        "phone": "phone VARCHAR(40)",
+        "telegram": "telegram VARCHAR(120)",
     }
     for c, ddl in user_cols.items():
         if not has_column("users", c):
@@ -1170,6 +1173,9 @@ def logout():
 @app.route("/register/blogger", methods=["GET", "POST"])
 def register_blogger():
     if request.method == "POST":
+        full_name = (request.form.get("full_name") or "").strip() or None
+        phone = (request.form.get("phone") or "").strip() or None
+        telegram = (request.form.get("telegram") or "").strip() or None
         email = (request.form.get("email") or "").strip().lower()
         password = request.form.get("password") or ""
         password2 = request.form.get("password2") or ""
@@ -1193,6 +1199,9 @@ def register_blogger():
             role=UserRole.BLOGGER,
             blocked=False,
             points=0,
+            full_name=full_name,
+            phone=phone,
+            telegram=telegram,
         )
         db.add(u)
         db.commit()
@@ -1203,36 +1212,8 @@ def register_blogger():
 
 @app.route("/register/advertiser", methods=["GET", "POST"])
 def register_advertiser():
-    if request.method == "POST":
-        email = (request.form.get("email") or "").strip().lower()
-        password = request.form.get("password") or ""
-        password2 = request.form.get("password2") or ""
-        if not email or "@" not in email:
-            flash("Укажите корректный email.", "danger")
-            return render_template("register_advertiser.html")
-        if len(password) < 6:
-            flash("Пароль не короче 6 символов.", "danger")
-            return render_template("register_advertiser.html")
-        if password != password2:
-            flash("Пароли не совпадают.", "danger")
-            return render_template("register_advertiser.html")
-        db = get_db()
-        if db.query(User).filter(func.lower(User.email) == email).first():
-            flash("Этот email уже зарегистрирован.", "danger")
-            return render_template("register_advertiser.html")
-        u = User(
-            email=email,
-            username=None,
-            password_hash=hash_password(password),
-            role=UserRole.ADVERTISER,
-            blocked=False,
-            points=0,
-        )
-        db.add(u)
-        db.commit()
-        flash("Регистрация успешна. Войдите.", "success")
-        return redirect(url_for("login"))
-    return render_template("register_advertiser.html")
+    # единая регистрация (без разделения на роли)
+    return redirect(url_for("register_blogger"))
 
 
 @app.route("/forgot-password", methods=["GET", "POST"])
@@ -1605,7 +1586,7 @@ def blogger_stats():
 
 
 @app.route("/advertiser/orders")
-@require_role(UserRole.ADVERTISER)
+@require_login
 def advertiser_orders():
     db = get_db()
     user = current_user()
@@ -1640,7 +1621,7 @@ def recommend_bloggers(db, advertiser_id: int, limit: int = 8):
 
 
 @app.route("/advertiser/bloggers")
-@require_role(UserRole.ADVERTISER)
+@require_login
 def advertiser_bloggers():
     db = get_db()
     user = current_user()
@@ -1655,7 +1636,7 @@ def advertiser_bloggers():
 
 
 @app.route("/advertiser/orders/<int:order_id>/offer", methods=["POST"])
-@require_role(UserRole.ADVERTISER)
+@require_login
 def advertiser_offer(order_id: int):
     db = get_db()
     user = current_user()
@@ -1751,7 +1732,7 @@ def tools_generate_image():
 
 
 @app.route("/advertiser/orders/new", methods=["GET", "POST"])
-@require_role(UserRole.ADVERTISER)
+@require_login
 def advertiser_new_order():
     if request.method == "POST":
         title = (request.form.get("title") or "").strip()

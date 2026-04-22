@@ -2,6 +2,31 @@
 {% block title %}Проект Хайп — главная{% endblock %}
 {% block content %}
 <section class="hero">
+  <div class="banner">
+    <div class="banner-track">
+      <div class="banner-slide">
+        <div class="banner-title">Закажи рекламу своего блога или сам рекламируй блогеров и бренды</div>
+        <div class="banner-sub muted">Платформа для роста блога: заказы, сервисы, аналитика и следующий шаг.</div>
+        <div class="banner-actions">
+          <a class="btn btn-primary" href="{{ url_for('register_blogger') }}">Оставить заявку</a>
+        </div>
+      </div>
+      <div class="banner-slide">
+        <div class="banner-title">Как это работает?</div>
+        <div class="banner-steps">
+          <div class="banner-step"><b>1.</b> Ты регистрируешься <span class="muted">(кнопка «Оставить заявку»)</span></div>
+          <div class="banner-step"><b>2.</b> Получаешь карту со стартовым бюджетом на продвижение блога</div>
+          <div class="banner-step"><b>3.</b> Тратишь его на платформе, растишь аудиторию и развиваешься</div>
+        </div>
+        <div class="banner-actions">
+          <a class="btn btn-primary" href="{{ url_for('register_blogger') }}">Оставить заявку</a>
+        </div>
+      </div>
+    </div>
+    <div class="banner-dots" aria-hidden="true">
+      <span class="dot"></span><span class="dot"></span>
+    </div>
+  </div>
   <div class="pill">Кодовое название · Проект Хайп</div>
   <h1>Платформа, где блогеры и бренды находят друг друга</h1>
   <p class="hero-lead">
@@ -9,8 +34,8 @@
     выполняют их и получают баллы на счёт. Плюс рекомендации, проверка контента и генерация черновиков.
   </p>
   <div style="display:flex;flex-wrap:wrap;gap:0.75rem;justify-content:center;">
-    <a class="btn btn-primary" href="{{ url_for('register_blogger') }}">Я блогер</a>
-    <a class="btn btn-ghost" href="{{ url_for('register_advertiser') }}">Я рекламодатель</a>
+    <a class="btn btn-primary" href="{{ url_for('register_blogger') }}">Оставить заявку</a>
+    <a class="btn btn-ghost" href="{{ url_for('login') }}">Войти</a>
   </div>
 </section>
 

@@ -17,7 +17,7 @@
   --warning: #fbbf24;
   --info: #38bdf8;
   --radius: 16px;
-  --font: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font: "SB Sans Text", "SB Sans Display", "SBSans", "Sber Sans", "SberSans", "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
 }
 
 *,
@@ -129,14 +129,28 @@ a:hover {
   gap: 0.5rem 1rem;
 }
 
-.nav a {
+.nav a,
+.nav .nav-link {
   color: var(--muted);
   font-size: 0.9rem;
   font-weight: 500;
   text-decoration: none;
+  padding: 0.4rem 0.55rem;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
 }
-.nav a:hover {
+.nav a:hover,
+.nav .nav-link:hover {
   color: var(--text);
+  background: rgba(220, 252, 231, 0.85);
+  border-color: rgba(34, 197, 94, 0.25);
+  transform: translateY(-1px);
+}
+.nav .nav-link.is-active {
+  color: #166534;
+  background: rgba(220, 252, 231, 0.95);
+  border-color: rgba(34, 197, 94, 0.35);
 }
 
 .hero {
@@ -221,6 +235,93 @@ a:hover {
 .btn:hover {
   transform: translateY(-1px);
   text-decoration: none;
+}
+.btn:active {
+  transform: translateY(0px) scale(0.99);
+}
+.btn.is-pressed {
+  transform: translateY(0px) scale(0.985);
+}
+.btn.is-loading {
+  opacity: 0.88;
+  cursor: progress;
+}
+.btn.is-loading::after {
+  content: "";
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  border-top-color: rgba(255, 255, 255, 0.95);
+  margin-left: 0.55rem;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Баннер на главной */
+.banner {
+  max-width: 860px;
+  margin: 0 auto 1.25rem;
+  border-radius: 18px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(255, 255, 255, 0.78);
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(15, 23, 42, 0.08);
+}
+.banner-track {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 200%;
+  animation: bannerSlide 10s ease-in-out infinite;
+}
+.banner-slide {
+  padding: 1.2rem 1.25rem;
+  text-align: left;
+}
+.banner-title {
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-size: 1.25rem;
+  line-height: 1.25;
+}
+.banner-sub {
+  margin-top: 0.35rem;
+}
+.banner-steps {
+  margin-top: 0.65rem;
+  display: grid;
+  gap: 0.35rem;
+}
+.banner-step b {
+  color: #166534;
+}
+.banner-actions {
+  margin-top: 0.9rem;
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+.banner-dots {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  padding: 0.65rem 0 0.9rem;
+}
+.banner-dots .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.18);
+}
+.banner-dots .dot:first-child {
+  background: rgba(34, 197, 94, 0.55);
+}
+@keyframes bannerSlide {
+  0%, 40% { transform: translateX(0%); }
+  50%, 90% { transform: translateX(-50%); }
+  100% { transform: translateX(0%); }
 }
 .btn-primary:hover {
   box-shadow: 0 10px 32px rgba(22, 163, 74, 0.25), 0 8px 26px rgba(192, 38, 211, 0.2);
