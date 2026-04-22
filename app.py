@@ -1208,8 +1208,10 @@ def register_blogger():
         )
         db.add(u)
         db.commit()
-        flash("Регистрация успешна. Войдите.", "success")
-        return redirect(url_for("login"))
+        db.refresh(u)
+        login_user(u)
+        flash("Регистрация выполнена. Добро пожаловать!", "success")
+        return redirect(url_for("blogger_profile"))
     return render_template("register_blogger.html")
 
 
