@@ -1176,6 +1176,8 @@ def register_blogger():
         full_name = (request.form.get("full_name") or "").strip() or None
         phone = (request.form.get("phone") or "").strip() or None
         telegram = (request.form.get("telegram") or "").strip() or None
+        raw_blog = (request.form.get("blog_url") or "").strip()
+        blog_url = (_ensure_http_url(raw_blog)[:600] if raw_blog else None) or None
         email = (request.form.get("email") or "").strip().lower()
         password = request.form.get("password") or ""
         password2 = request.form.get("password2") or ""
@@ -1205,6 +1207,7 @@ def register_blogger():
             full_name=full_name,
             phone=phone,
             telegram=telegram,
+            blog_url=blog_url,
         )
         db.add(u)
         db.commit()
