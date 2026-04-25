@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Механизм работы — Проект Хайп{% endblock %}
+{% block content %}
+<section class="hero" style="padding-top:2rem;text-align:left;">
+  <h1 style="text-align:left;margin-bottom:0.25rem;">Механизм работы</h1>
+  <p class="hero-lead" style="margin-left:0;text-align:left;margin-bottom:0;">
+    Как заводятся и исполняются заказы, как работает AI‑помощник и генератор, и зачем нужны баллы.
+  </p>
+</section>
+
+<div class="card callout" id="mechanics" style="margin-top:1rem;">
+  <div style="display:flex;flex-wrap:wrap;gap:0.75rem;align-items:center;justify-content:space-between;">
+    <div>
+      <strong>Коротко:</strong> вы получаете баллы за рекламу других и тратите их на продвижение себя.
+      <span class="muted">В перспективе — вывод с платформы как деньги.</span>
+    </div>
+    <a class="btn btn-ghost btn-sm" href="{{ url_for('assistant_chat') }}">Остались вопросы? AI‑помощник</a>
+  </div>
+</div>
+
+<div class="grid-2" style="margin-top:1.25rem;">
+  <div class="card">
+    <h2 style="margin-top:0;">Схема работы</h2>
+    <div class="flow">
+      <div class="flow-col">
+        <div class="flow-title">Заказчик</div>
+        <div class="flow-step">
+          <div class="flow-n">1</div>
+          <div>
+            <div class="flow-h">Создаёт заказ</div>
+            <div class="muted">Указывает описание и награду в баллах — столько же списывается с баланса.</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-n">2</div>
+          <div>
+            <div class="flow-h">Выбирает исполнителя</div>
+            <div class="muted">По каталогу блогеров и предложениям.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-mid" aria-hidden="true">
+        <div class="flow-arrow">→</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-arrow">→</div>
+      </div>
+
+      <div class="flow-col">
+        <div class="flow-title">Блогер</div>
+        <div class="flow-step">
+          <div class="flow-n flow-n--alt">1</div>
+          <div>
+            <div class="flow-h">Берёт заказ в работу</div>
+            <div class="muted">Можно открыть карточку заказа и изучить условия до выбора.</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-n flow-n--alt">2</div>
+          <div>
+            <div class="flow-h">Выполняет и закрывает</div>
+            <div class="muted">При закрытии указывает результат: ссылка/что сделано.</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-n flow-n--alt">3</div>
+          <div>
+            <div class="flow-h">Получает баллы</div>
+            <div class="muted">Баллы начисляются за выполненный заказ.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0;">Баллы: как использовать</h2>
+    <ul style="margin:0;padding-left:1.1rem;">
+      <li><strong>Получать</strong> баллы можно за рекламу других пользователей (выполнение заказов).</li>
+      <li><strong>Тратить</strong> баллы можно на собственное продвижение: создавайте заказы — баллы списываются при публикации.</li>
+      <li><strong>Перспектива</strong>: вывод с платформы как деньги (в разработке).</li>
+    </ul>
+    <hr style="border:none;border-top:1px solid var(--border);margin:1rem 0;">
+    <h2 style="margin-top:0;">AI‑помощник и генератор</h2>
+    <ul style="margin:0;padding-left:1.1rem;">
+      <li><strong>AI‑помощник</strong> отвечает по функциям сайта и подсказывает шаги.</li>
+      <li><strong>Генератор текстов</strong> помогает подготовить черновик рекламного поста/интеграции.</li>
+      <li><strong>Аналитика</strong> в профиле может подтягивать данные по вовлечённости (Telegram/сайты) и делать выводы.</li>
+    </ul>
+    <hr style="border:none;border-top:1px solid var(--border);margin:1rem 0;">
+    <h2 style="margin-top:0;">Самозанятость и ИП</h2>
+    <p class="muted" style="margin:0;">В профиле есть действия для регистрации самозанятости или ИП (сейчас отмечены как «в проработке»).</p>
+  </div>
+</div>
+
+<div class="card" style="margin-top:1.25rem;">
+  <h2 style="margin-top:0;">Остались вопросы?</h2>
+  <p class="muted" style="margin-top:0;">Зайдите в AI‑помощника — он подскажет по механике, ролям и страницам.</p>
+  <a class="btn btn-primary" href="{{ url_for('assistant_chat') }}">Открыть AI‑помощника</a>
+</div>
+{% endblock %}
+

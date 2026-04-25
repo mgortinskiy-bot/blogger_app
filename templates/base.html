@@ -27,6 +27,7 @@
         <span class="nav-toggle-lines" aria-hidden="true"></span>
       </button>
       <nav id="nav" class="nav" data-nav>
+        <a class="nav-link {% if request.endpoint == 'how_it_works' %}is-active{% endif %}" href="{{ url_for('how_it_works') }}">Механизм работы</a>
         {% if current_user %}
           {% if current_user.role == 'admin' %}
             <a class="nav-link {% if request.endpoint == 'admin_dashboard' %}is-active{% endif %}" href="{{ url_for('admin_dashboard') }}">Дашборд</a>
