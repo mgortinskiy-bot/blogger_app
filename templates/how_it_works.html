@@ -16,6 +16,14 @@
     </div>
     <a class="btn btn-ghost btn-sm" href="{{ url_for('assistant_chat') }}">Остались вопросы? AI‑помощник</a>
   </div>
+  <div class="muted" style="margin-top:0.75rem;display:flex;flex-wrap:wrap;gap:0.5rem 0.9rem;">
+    <a href="{{ url_for('blogger_orders') }}">Каталог заказов</a>
+    <a href="{{ url_for('advertiser_new_order') }}">Создать заказ</a>
+    <a href="{{ url_for('advertiser_orders') }}">Мои заказы</a>
+    <a href="{{ url_for('blogger_profile') }}">Профиль</a>
+    <a href="{{ url_for('assistant_chat') }}">AI‑помощник</a>
+    <a href="{{ url_for('tools_generate') }}">Генератор текстов</a>
+  </div>
 </div>
 
 <div class="grid-2" style="margin-top:1.25rem;">
@@ -28,14 +36,14 @@
           <div class="flow-n">1</div>
           <div>
             <div class="flow-h">Создаёт заказ</div>
-            <div class="muted">Указывает описание и награду в баллах — столько же списывается с баланса.</div>
+            <div class="muted">Указывает описание и награду в баллах — столько же списывается с баланса. <a href="{{ url_for('advertiser_new_order') }}">Открыть создание заказа</a></div>
           </div>
         </div>
         <div class="flow-step">
           <div class="flow-n">2</div>
           <div>
             <div class="flow-h">Выбирает исполнителя</div>
-            <div class="muted">По каталогу блогеров и предложениям.</div>
+            <div class="muted">По каталогу блогеров и предложениям. <a href="{{ url_for('advertiser_orders') }}">Перейти в «Мои заказы»</a></div>
           </div>
         </div>
       </div>
@@ -52,14 +60,14 @@
           <div class="flow-n flow-n--alt">1</div>
           <div>
             <div class="flow-h">Берёт заказ в работу</div>
-            <div class="muted">Можно открыть карточку заказа и изучить условия до выбора.</div>
+            <div class="muted">Можно открыть карточку заказа и изучить условия до выбора. <a href="{{ url_for('blogger_orders') }}">Открыть каталог заказов</a></div>
           </div>
         </div>
         <div class="flow-step">
           <div class="flow-n flow-n--alt">2</div>
           <div>
             <div class="flow-h">Выполняет и закрывает</div>
-            <div class="muted">При закрытии указывает результат: ссылка/что сделано.</div>
+            <div class="muted">При закрытии указывает результат: ссылка/что сделано. <a href="{{ url_for('blogger_orders') }}">Вернуться к заказам</a></div>
           </div>
         </div>
         <div class="flow-step">
@@ -83,13 +91,13 @@
     <hr style="border:none;border-top:1px solid var(--border);margin:1rem 0;">
     <h2 style="margin-top:0;">AI‑помощник и генератор</h2>
     <ul style="margin:0;padding-left:1.1rem;">
-      <li><strong>AI‑помощник</strong> отвечает по функциям сайта и подсказывает шаги.</li>
-      <li><strong>Генератор текстов</strong> помогает подготовить черновик рекламного поста/интеграции.</li>
-      <li><strong>Аналитика</strong> в профиле может подтягивать данные по вовлечённости (Telegram/сайты) и делать выводы.</li>
+      <li><strong>AI‑помощник</strong> отвечает по функциям сайта и подсказывает шаги. <a href="{{ url_for('assistant_chat') }}">Открыть</a></li>
+      <li><strong>Генератор текстов</strong> помогает подготовить черновик рекламного поста/интеграции. <a href="{{ url_for('tools_generate') }}">Открыть</a></li>
+      <li><strong>Аналитика</strong> в <a href="{{ url_for('blogger_profile') }}">профиле</a> может подтягивать данные по вовлечённости (Telegram/сайты) и делать выводы.</li>
     </ul>
     <hr style="border:none;border-top:1px solid var(--border);margin:1rem 0;">
     <h2 style="margin-top:0;">Самозанятость и ИП</h2>
-    <p class="muted" style="margin:0;">В профиле есть действия для регистрации самозанятости или ИП (сейчас отмечены как «в проработке»).</p>
+    <p class="muted" style="margin:0;">В <a href="{{ url_for('blogger_profile') }}">профиле</a> есть действия для регистрации самозанятости или ИП (сейчас отмечены как «в проработке»).</p>
   </div>
 </div>
 
