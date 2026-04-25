@@ -23,7 +23,10 @@
           <span class="brand-sub">биржа заказов для блогеров</span>
         </div>
       </a>
-      <nav class="nav">
+      <button class="nav-toggle" type="button" aria-label="Меню" aria-controls="nav" aria-expanded="false">
+        <span class="nav-toggle-lines" aria-hidden="true"></span>
+      </button>
+      <nav id="nav" class="nav" data-nav>
         {% if current_user %}
           {% if current_user.role == 'admin' %}
             <a class="nav-link {% if request.endpoint == 'admin_dashboard' %}is-active{% endif %}" href="{{ url_for('admin_dashboard') }}">Дашборд</a>
@@ -67,6 +70,24 @@
   <script>
     // UX: анимация нажатия + состояние загрузки при запуске действий (submit)
     (function () {
+      // Mobile nav toggle
+      var toggle = document.querySelector(".nav-toggle");
+      var nav = document.querySelector("[data-nav]");
+      if (toggle && nav) {
+        toggle.addEventListener("click", function () {
+          var isOpen = nav.classList.toggle("is-open");
+          toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+        });
+
+        document.addEventListener("click", function (e) {
+          if (!nav.classList.contains("is-open")) return;
+          var t = e.target;
+          if (t && (nav.contains(t) || toggle.contains(t))) return;
+          nav.classList.remove("is-open");
+          toggle.setAttribute("aria-expanded", "false");
+        });
+      }
+
       document.addEventListener("click", function (e) {
         var btn = e.target && e.target.closest ? e.target.closest(".btn") : null;
         if (!btn) return;

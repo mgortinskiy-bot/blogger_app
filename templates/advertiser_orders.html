@@ -26,7 +26,7 @@
         {% for o in orders_as_advertiser %}
         <tr>
           <td>
-            <strong>{{ o.title }}</strong>
+            <strong><a href="{{ url_for('order_detail', order_id=o.id) }}">{{ o.title }}</a></strong>
             <div class="muted" style="font-size:0.85rem;margin-top:0.25rem;">{{ o.description[:120] }}{% if o.description|length > 120 %}…{% endif %}</div>
           </td>
           <td>
@@ -62,7 +62,7 @@
         {% for o in orders_as_blogger %}
         <tr>
           <td>
-            <strong>{{ o.title }}</strong>
+            <strong><a href="{{ url_for('order_detail', order_id=o.id) }}">{{ o.title }}</a></strong>
             <div class="muted" style="font-size:0.85rem;margin-top:0.25rem;">{{ o.description[:120] }}{% if o.description|length > 120 %}…{% endif %}</div>
           </td>
           <td>

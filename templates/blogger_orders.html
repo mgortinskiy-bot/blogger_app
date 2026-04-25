@@ -19,14 +19,19 @@
   <h3 style="margin-top:0;">В работе</h3>
   {% for o in my_active %}
   <div class="order-card card" style="background:rgba(255,255,255,0.75);">
-    <strong>{{ o.title }}</strong>
+    <strong><a href="{{ url_for('order_detail', order_id=o.id) }}">{{ o.title }}</a></strong>
     <p class="muted" style="margin:0.5rem 0;">{{ o.description }}</p>
     <div class="order-meta">
       <span class="badge badge-assigned">В работе</span>
       <span class="muted">+{{ o.points_reward }} баллов за выполнение</span>
-      <form method="post" action="{{ url_for('blogger_complete_order', order_id=o.id) }}" class="inline-form" onsubmit="return confirm('Отметить заказ выполненным?');">
-        <button class="btn btn-primary btn-sm" type="submit">Завершить и получить баллы</button>
-      </form>
+      <details style="width:100%;">
+        <summary class="muted" style="cursor:pointer;user-select:none;">Закрыть заказ</summary>
+        <form method="post" action="{{ url_for('blogger_complete_order', order_id=o.id) }}" style="margin-top:0.65rem;" onsubmit="return confirm('Отметить заказ выполненным?');">
+          <label for="result_notes_{{ o.id }}">Как выполнено (ссылка/что сделано)</label>
+          <textarea id="result_notes_{{ o.id }}" name="result_notes" placeholder="Например: ссылка на пост/сторис, дата публикации, краткий отчёт…"></textarea>
+          <button class="btn btn-primary btn-sm" type="submit" style="margin-top:0.6rem;">Завершить и получить баллы</button>
+        </form>
+      </details>
     </div>
   </div>
   {% endfor %}
@@ -37,7 +42,7 @@
   <h3 style="margin-top:0;">Открытые заказы</h3>
   {% for o in orders_open %}
   <div class="order-card" style="padding:1rem 0;border-bottom:1px solid var(--border);">
-    <strong>{{ o.title }}</strong>
+    <strong><a href="{{ url_for('order_detail', order_id=o.id) }}">{{ o.title }}</a></strong>
     <p class="muted" style="margin:0.5rem 0;">{{ o.description }}</p>
     <div class="order-meta">
       <span class="badge badge-open">Открыт</span>

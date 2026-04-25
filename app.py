@@ -1417,6 +1417,27 @@ def blogger_orders():
     return render_template("blogger_orders.html", orders_open=orders_open, my_active=my_active, q=q)
 
 
+@app.route("/orders/<int:order_id>")
+@require_login
+def order_detail(order_id: int):
+    db = get_db()
+    user = current_user()
+    order = db.get(Order, order_id)
+    if not order:
+        flash("Заказ не найден.", "danger")
+        return redirect(url_for("index"))
+    my_active = []
+    if user and getattr(user, "role", None) == UserRole.BLOGGER:
+        my_active = (
+            db.query(Order)
+            .filter(Order.blogger_id == user.id, Order.status == OrderStatus.ASSIGNED)
+            .order_by(Order.created_at.desc())
+            .limit(1)
+            .all()
+        )
+    return render_template("order_detail.html", order=order, my_active=my_active)
+
+
 @app.route("/blogger/profile", methods=["GET", "POST"])
 @require_role(UserRole.BLOGGER)
 def blogger_profile():
@@ -1581,8 +1602,10 @@ def blogger_complete_order(order_id: int):
     if not order or order.blogger_id != user.id or order.status != OrderStatus.ASSIGNED:
         flash("Нельзя завершить этот заказ.", "danger")
         return redirect(url_for("blogger_orders"))
+    notes = (request.form.get("result_notes") or "").strip() or None
     order.status = OrderStatus.COMPLETED
     order.completed_at = datetime.utcnow()
+    order.result_notes = notes
     user.points = (user.points or 0) + max(0, order.points_reward)
     db.commit()
     flash(f"Заказ выполнен. Начислено {order.points_reward} баллов.", "success")

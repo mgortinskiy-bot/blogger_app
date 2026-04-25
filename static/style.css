@@ -215,6 +215,40 @@ main {
   gap: 0.5rem 1rem;
 }
 
+.nav-toggle {
+  display: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(14px) saturate(1.15);
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.05);
+  cursor: pointer;
+}
+
+.nav-toggle-lines {
+  display: block;
+  width: 18px;
+  height: 2px;
+  margin: 0 auto;
+  background: #334155;
+  border-radius: 999px;
+  position: relative;
+}
+.nav-toggle-lines::before,
+.nav-toggle-lines::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #334155;
+  border-radius: 999px;
+}
+.nav-toggle-lines::before { top: -6px; }
+.nav-toggle-lines::after { top: 6px; }
+
 .nav a,
 .nav .nav-link {
   color: var(--muted);
@@ -444,7 +478,7 @@ main {
   display: grid;
   grid-template-columns: 1fr 1fr;
   width: 200%;
-  animation: bannerSlide 10s ease-in-out infinite;
+  animation: bannerSlide 18s ease-in-out infinite;
 }
 .banner-slide {
   padding: 1.2rem 1.25rem;
@@ -492,6 +526,64 @@ main {
   0%, 40% { transform: translateX(0%); }
   50%, 90% { transform: translateX(-50%); }
   100% { transform: translateX(0%); }
+}
+
+/* Mobile layout */
+@media (max-width: 820px) {
+  .topbar {
+    position: relative;
+  }
+
+  .topbar {
+    padding: 0.85rem 0;
+  }
+
+  .brand-sub {
+    display: none;
+  }
+
+  .nav-toggle {
+    display: inline-grid;
+    place-items: center;
+  }
+
+  .nav {
+    display: none;
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    width: min(92vw, 420px);
+    padding: 0.75rem;
+    border-radius: 16px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(16px) saturate(1.2);
+    box-shadow: 0 12px 40px rgba(15, 23, 42, 0.12);
+    z-index: 60;
+  }
+
+  .nav.is-open {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.4rem;
+  }
+
+  .nav a,
+  .nav .nav-link {
+    padding: 0.6rem 0.7rem;
+    border-radius: 12px;
+    background: rgba(248, 250, 252, 0.65);
+    border-color: rgba(15, 23, 42, 0.06);
+  }
+
+  .shell {
+    padding: 0 1rem 3.25rem;
+  }
+
+  .hero {
+    padding: 2.4rem 0 1.5rem;
+  }
 }
 .btn-primary:hover {
   box-shadow: 0 10px 32px rgba(22, 163, 74, 0.25), 0 8px 26px rgba(192, 38, 211, 0.2);
@@ -557,6 +649,28 @@ textarea {
 textarea {
   min-height: 120px;
   resize: vertical;
+}
+
+details {
+  width: 100%;
+}
+
+details > summary {
+  list-style: none;
+}
+
+details > summary::-webkit-details-marker {
+  display: none;
+}
+
+details > summary::after {
+  content: "▾";
+  float: right;
+  color: #64748b;
+}
+
+details[open] > summary::after {
+  content: "▴";
 }
 
 input:focus,

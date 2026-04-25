@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Заказ #{{ order.id }} — Проект Хайп{% endblock %}
+{% block content %}
+<section class="hero" style="padding-top:2rem;text-align:left;">
+  <h1 style="text-align:left;margin-bottom:0.25rem;">{{ order.title }}</h1>
+  <p class="hero-lead" style="margin-left:0;text-align:left;margin-bottom:0;">
+    <span class="badge {% if order.status == 'open' %}badge-open{% elif order.status == 'assigned' %}badge-assigned{% else %}badge-done{% endif %}">
+      {% if order.status == 'open' %}Открыт{% endif %}
+      {% if order.status == 'assigned' %}В работе{% endif %}
+      {% if order.status == 'completed' %}Выполнен{% endif %}
+    </span>
+    <span class="muted" style="margin-left:0.65rem;">Награда: <strong>{{ order.points_reward }}</strong> баллов</span>
+  </p>
+</section>
+
+<div class="grid-2" style="margin-top:1rem;">
+  <div class="card">
+    <h2 style="margin-top:0;">Описание</h2>
+    <p style="white-space:pre-wrap;margin:0;">{{ order.description }}</p>
+  </div>
+  <div class="card">
+    <h2 style="margin-top:0;">Действия</h2>
+    {% if current_user and current_user.role == 'blogger' %}
+      {% if order.status == 'open' %}
+        {% if order.advertiser_id == current_user.id %}
+          <p class="muted" style="margin-top:0;">Это ваш заказ (как заказчика). Взять его в работу нельзя.</p>
+          <a class="btn btn-ghost btn-sm" href="{{ url_for('advertiser_orders') }}">Открыть «Мои заказы»</a>
+        {% elif my_active %}
+          <p class="muted" style="margin-top:0;">У вас уже есть активный заказ. Сначала завершите его.</p>
+          <a class="btn btn-ghost btn-sm" href="{{ url_for('blogger_orders') }}">К каталогу заказов</a>
+        {% else %}
+          <form method="post" action="{{ url_for('blogger_take_order', order_id=order.id) }}">
+            <button class="btn btn-primary" type="submit">Взять заказ</button>
+          </form>
+          <p class="muted" style="margin-top:0.75rem;">Перед выбором можно спокойно прочитать условия.</p>
+        {% endif %}
+      {% elif order.status == 'assigned' and order.blogger_id == current_user.id %}
+        <p class="muted" style="margin-top:0;">Заказ у вас в работе. При завершении можно добавить результат.</p>
+        <form method="post" action="{{ url_for('blogger_complete_order', order_id=order.id) }}" onsubmit="return confirm('Отметить заказ выполненным?');">
+          <label for="result_notes">Как выполнено (ссылка/что сделано)</label>
+          <textarea id="result_notes" name="result_notes" placeholder="Ссылка на публикацию, дата, краткий отчёт…"></textarea>
+          <button class="btn btn-primary" type="submit" style="margin-top:0.6rem;">Завершить</button>
+        </form>
+      {% else %}
+        <p class="muted" style="margin-top:0;">Действий для вашей роли нет.</p>
+      {% endif %}
+    {% else %}
+      <p class="muted" style="margin-top:0;">Чтобы взять заказ в работу или создать заказ — войдите в аккаунт.</p>
+      <a class="btn btn-primary btn-sm" href="{{ url_for('login') }}">Войти</a>
+    {% endif %}
+  </div>
+</div>
+
+{% if order.status == 'completed' and order.result_notes %}
+<div class="card" style="margin-top:1.25rem;">
+  <h2 style="margin-top:0;">Результат выполнения</h2>
+  <p class="muted" style="white-space:pre-wrap;margin:0;">{{ order.result_notes }}</p>
+</div>
+{% endif %}
+{% endblock %}
+
